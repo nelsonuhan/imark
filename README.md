@@ -1,8 +1,15 @@
+> [!NOTE]
+> This is a personal fork of [Imark](https://github.com/migsilva89/imark),
+> stripped down to just a Markdown renderer/reader. Gone: the editor mode,
+> comments/annotations, the agent-review workflow, and the sidebar's file
+> browser. What's left: rendering, a collapsible outline, live reload, Quick
+> Look, wiki-links, tabs, and find.
+
 <p align="center">
-  <img src=".github/assets/app-icon.png" width="128" height="128" alt="Imark app icon">
+  <img src=".github/assets/app-icon.png" width="128" height="128" alt="imark app icon">
 </p>
 
-<h1 align="center">Imark ®</h1>
+<h1 align="center">imark ®</h1>
 
 <p align="center">
   <strong>Native Markdown reader for macOS.</strong><br><br>
@@ -20,7 +27,7 @@
 </p>
 
 > [!NOTE]
-> Imark reads. There is no editor mode, no annotation, and nothing on screen
+> imark reads. There is no editor mode, no annotation, and nothing on screen
 > ever offers to change your file.
 
 ## What it does
@@ -28,7 +35,6 @@
 - **Quick Look previews** — the space bar in the Finder renders the document, not raw text, using the same engine as the app
 - **Live reload** — saving in your editor updates the view in under 300ms, keeping your scroll position, and it survives the delete-and-rename that editors call an atomic save
 - **Foldable outline** — headings in the sidebar, with sections you can collapse; past twenty entries it opens folded, so a changelog is one row per version
-- **Outline rail** — a tick per heading down the edge of every document, tapering around the pointer, with a card that names the section before you commit to going there
 - **Wiki-links** — `[[note]]` resolves against the folder and opens in the same window, with back and forward history
 - **Everything GitHub-flavoured** — tables, task lists, footnotes, front matter as a header card you can put away from the View menu, syntax highlighting, Mermaid diagrams, KaTeX maths
 - **Find with a counter** — `⌘F` highlights every hit and tells you which one you are on
@@ -37,9 +43,14 @@
 
 ## Screenshots
 
+> [!NOTE]
+> The screenshots below are from before this fork's stripping pass and still
+> show the file browser, the editor toggle, and the outline rail — all gone
+> now. Pending a retake.
+
 | Document window | Quick Look preview |
 |:---:|:---:|
-| ![A document window with the outline sidebar and syntax-highlighted code](.github/assets/imark-window.png) | ![The Finder preview panel, with the outline rail down the left edge](.github/assets/imark-quicklook.png) |
+| ![A document window with the outline sidebar and syntax-highlighted code](.github/assets/imark-window.png) | ![The Finder preview panel](.github/assets/imark-quicklook.png) |
 
 Both are rendering [`testdata/showcase.md`](testdata/showcase.md). For the full
 sweep — every construction, and enough headings that the outline folds itself —
@@ -51,23 +62,19 @@ open [`testdata/everything.md`](testdata/everything.md).
 
 <p align="center"><em>Space bar in the Finder. No app to open first.</em></p>
 
-<p align="center">
-  <img src=".github/assets/imark-rail.png" width="520" alt="The rail tapering around the pointer, with a card naming the section and quoting its first line">
-</p>
-
-<p align="center"><em>The rail: one tick per heading, in the window and in the Finder's preview panel alike. Click to jump, or press and drag to scrub.</em></p>
-
 ## Install
 
 ```bash
-brew install --cask migsilva89/imark/imark
+brew install --cask nelsonuhan/tap/imark
 ```
 
-Or download the [latest release](../../releases/latest) and drag `Imark.app` into `/Applications`. The disk image is signed and notarised, so it opens without a Gatekeeper warning.
+> Once the tap exists — see [RELEASING.md](RELEASING.md) for how it gets set up.
 
-macOS 14 or later. Imark tells you when a newer version exists — once per release, and only if you leave the check on in Settings.
+Or build from source (below) and drag `imark.app` into `/Applications`.
 
-To make it the default for `.md`: launch it with no document open and click **Make Imark the default for .md**, or use the same item in the **Imark** menu. Once it is the default, both quietly disappear.
+macOS 14 or later. imark tells you when a newer version exists — once per release, and only if you leave the check on in Settings.
+
+To make it the default for `.md`: launch it with no document open and click **Make imark the default for .md**, or use the same item in the **imark** menu. Once it is the default, both quietly disappear.
 
 ## What it touches
 
@@ -76,7 +83,7 @@ To make it the default for `.md`: launch it with no document open and click **Ma
 | `~/Library/Preferences/pt.miguelsilva.imark.plist` | your settings — theme, text size, width, the update check |
 | The network | one request a day to `api.github.com` asking whether a newer version exists. A version number travels, nothing of yours does, and Settings turns it off |
 
-Imark never writes to the documents it opens.
+imark never writes to the documents it opens.
 
 ## Keyboard shortcuts
 
@@ -106,7 +113,7 @@ cd renderer && npm ci && cd ..
 ./build.sh
 ```
 
-That builds the JavaScript bundle, compiles the Swift, assembles `Imark.app` and
+That builds the JavaScript bundle, compiles the Swift, assembles `imark.app` and
 installs it to `/Applications`. `npm ci` is not optional: the rendered output is
 generated, not committed, and `build.sh` refuses to assemble an app with a blank
 window.
@@ -134,18 +141,18 @@ it, with no error and no log entry.
 
 ## Security, contributing, licence
 
-Imark is a personal project, maintained by one person. Issues get answered and
+imark is a personal project, maintained by one person. Issues get answered and
 pull requests are welcome —
 [`CONTRIBUTING.md`](CONTRIBUTING.md) says what is out of scope before you spend a
 weekend on it — but there is no support promise and no release schedule. For
 anything that looks like a security problem, [`SECURITY.md`](SECURITY.md) says
 where to send it instead of the issue tracker.
 
-Everything Imark bundles is permissive — MIT, ISC, BSD, Unlicense — with no
+Everything imark bundles is permissive — MIT, ISC, BSD, Unlicense — with no
 copyleft anywhere in the tree. Several require their copyright notice to travel
 with the binary, so [`THIRD-PARTY.md`](THIRD-PARTY.md) is generated from what
 esbuild actually put in the bundle, on every build, and the same list ships
-inside the app: **Imark › About Imark** shows it.
+inside the app: **imark › About imark** shows it.
 
-Imark itself is [MIT](LICENSE) — use it, change it, redistribute it, just keep
+imark itself is [MIT](LICENSE) — use it, change it, redistribute it, just keep
 the copyright notice.
