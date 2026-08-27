@@ -62,7 +62,7 @@ enum Updates {
             } else {
                 let alert = NSAlert()
                 alert.messageText = "You're up to date"
-                alert.informativeText = "Imark \(current) is the latest version."
+                alert.informativeText = "imark \(current) is the latest version."
                 alert.runModal()
             }
         } failed: {
@@ -93,7 +93,7 @@ enum Updates {
 
     private static func offer(_ version: String) {
         let alert = NSAlert()
-        alert.messageText = "Imark \(version) is available"
+        alert.messageText = "imark \(version) is available"
         alert.informativeText =
             "You have \(current). The download is a drag-and-drop over the old one."
         alert.addButton(withTitle: "View Download")

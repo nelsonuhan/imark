@@ -1,8 +1,7 @@
 # Security
 
-If you find something that lets a document or a comment do damage — corrupt a
-file, run something it should not, reach outside the app — please do not open a
-public issue.
+If you find something that lets a document do damage — run something it should
+not, reach outside the app — please do not open a public issue.
 
 Report it privately through GitHub's [security advisories][advisory].
 

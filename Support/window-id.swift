@@ -3,11 +3,11 @@ import Foundation
 
 // Prints the window id of the named app's largest on-screen window:
 //
-//   screencapture -x -o -l"$(swift Support/window-id.swift Imark)" shot.png
+//   screencapture -x -o -l"$(swift Support/window-id.swift imark)" shot.png
 //
 // Use this rather than a plain screencapture — it photographs that one window
 // and nothing else that happens to be on the desktop.
-let target = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "Imark"
+let target = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "imark"
 let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
     as? [[String: Any]] ?? []
 

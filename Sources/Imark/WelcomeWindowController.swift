@@ -44,7 +44,7 @@ final class WelcomeWindowController: NSWindowController {
             icon.heightAnchor.constraint(equalToConstant: 84),
         ])
 
-        let title = NSTextField(labelWithString: "Imark")
+        let title = NSTextField(labelWithString: "imark")
         title.font = .systemFont(ofSize: 26, weight: .semibold)
 
         let subtitle = NSTextField(labelWithString: "Drop a .md file here")
@@ -102,7 +102,7 @@ final class WelcomeWindowController: NSWindowController {
         }
 
         let button = NSButton(
-            title: "Make Imark the default for .md",
+            title: "Make imark the default for .md",
             target: self,
             action: #selector(makeDefault)
         )

@@ -1,6 +1,6 @@
 # Contributing
 
-Imark is one person's app. Issues get answered; pull requests are welcome but
+imark is one person's app. Issues get answered; pull requests are welcome but
 please open an issue first, so nobody spends a weekend on something I was never
 going to merge.
 
@@ -51,12 +51,12 @@ Two helpers exist for looking at the UI without photographing the whole desktop.
 one window:
 
 ```bash
-screencapture -x -o -l"$(swift Support/window-id.swift Imark)" shot.png
+screencapture -x -o -l"$(swift Support/window-id.swift imark)" shot.png
 ```
 
 ## What this is not
 
-- **Not an editor.** Imark reads, and writes nothing to your files.
+- **Not an editor.** imark reads, and writes nothing to your files.
 - **Not cross-platform.** It is AppKit and a WebView, and the Quick Look
   extension only exists on macOS.
 - **Not a vault.** No database, no index, no folder structure it insists on.

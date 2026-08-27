@@ -5,7 +5,7 @@
 	<key>CFBundleName</key>
 	<string>ImarkQuickLook</string>
 	<key>CFBundleDisplayName</key>
-	<string>Imark Quick Look</string>
+	<string>imark Quick Look</string>
 	<key>CFBundleIdentifier</key>
 	<string>pt.miguelsilva.imark.quicklook</string>
 	<key>CFBundleExecutable</key>

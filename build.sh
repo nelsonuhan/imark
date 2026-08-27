@@ -1,5 +1,5 @@
 #!/bin/bash
-# Builds Imark.app and installs it so Launch Services picks up the file
+# Builds imark.app and installs it so Launch Services picks up the file
 # associations and the Quick Look extension.
 #
 #   ./build.sh            build + install to ~/Applications
@@ -26,10 +26,10 @@ for arg in "$@"; do
 done
 
 if [ "$DEV" -eq 1 ]; then
-	APP_NAME="Imark Dev"
+	APP_NAME="imark Dev"
 	BUNDLE_ID="pt.miguelsilva.imark.dev"
 else
-	APP_NAME="Imark"
+	APP_NAME="imark"
 	BUNDLE_ID="pt.miguelsilva.imark"
 fi
 

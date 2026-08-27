@@ -31,7 +31,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
             backing: .buffered,
             defer: false
         )
-        window.title = "Imark Settings"
+        window.title = "imark Settings"
         super.init(window: window)
         window.delegate = self
 
@@ -122,7 +122,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
     }
 
     private func generalRows() -> [(String, NSView)] {
-        makeDefault.title = "Make Imark the Default"
+        makeDefault.title = "Make imark the Default"
         makeDefault.bezelStyle = .rounded
         makeDefault.target = self
         makeDefault.action = #selector(makeDefaultPressed)
@@ -132,7 +132,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
             accessibilityDescription: nil
         ) ?? NSImage())
         tick.contentTintColor = .systemGreen
-        let done = NSTextField(labelWithString: "Imark opens them")
+        let done = NSTextField(labelWithString: "imark opens them")
         done.textColor = .secondaryLabelColor
         isDefault.setViews([tick, done], in: .leading)
         isDefault.spacing = 6
