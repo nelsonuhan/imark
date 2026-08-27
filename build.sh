@@ -1,6 +1,6 @@
 #!/bin/bash
 # Builds imark.app and installs it so Launch Services picks up the file
-# associations and the Quick Look extension.
+# associations.
 #
 #   ./build.sh            build + install to ~/Applications
 #   ./build.sh --no-install   build into dist/ only
@@ -72,9 +72,7 @@ BIN="$(swift build -c "$CONFIG" --arch arm64 --show-bin-path)"
 
 step "assemble $APP_NAME.app"
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS" \
-         "$APP/Contents/Resources" \
-         "$APP/Contents/PlugIns/ImarkQuickLook.appex/Contents/MacOS"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
 cp "$BIN/Imark" "$APP/Contents/MacOS/Imark"
 cp "$ROOT/Support/Imark-Info.plist" "$APP/Contents/Info.plist"
@@ -109,26 +107,8 @@ if [ -f "$ROOT/Support/Credits.html" ]; then
 	cp "$ROOT/Support/Credits.html" "$APP/Contents/Resources/Credits.html"
 fi
 
-APPEX="$APP/Contents/PlugIns/ImarkQuickLook.appex"
-cp "$BIN/ImarkQuickLook" "$APPEX/Contents/MacOS/ImarkQuickLook"
-cp "$ROOT/Support/QuickLook-Info.plist" "$APPEX/Contents/Info.plist"
-if [ "$DEV" -eq 1 ]; then
-	/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $BUNDLE_ID.quicklook" \
-		-c "Set :CFBundleDisplayName $APP_NAME Quick Look" \
-		"$APPEX/Contents/Info.plist" >/dev/null
-fi
-
-# The extension is sandboxed and cannot count on reading the containing app's
-# Resources, so it gets its own copy of the renderer.
-mkdir -p "$APPEX/Contents/Resources"
-if [ -d "$ROOT/Resources" ]; then
-	cp -R "$ROOT/Resources/." "$APPEX/Contents/Resources/"
-fi
-
 # ----------------------------------------------------------------- sign
 
-# Inner bundles must be sealed before the outer one, or the outer signature
-# is invalidated the moment the extension changes.
 if [ "$SIGN_IDENTITY" = "-" ]; then
 	step "sign (ad-hoc)"
 	TIMESTAMP="--timestamp=none"
@@ -139,9 +119,6 @@ else
 	EXTRA="--options=runtime"
 fi
 
-# shellcheck disable=SC2086
-codesign --force --sign "$SIGN_IDENTITY" $TIMESTAMP $EXTRA \
-	--entitlements "$ROOT/Support/QuickLook.entitlements" "$APPEX" >/dev/null 2>&1
 # shellcheck disable=SC2086
 codesign --force --sign "$SIGN_IDENTITY" $TIMESTAMP $EXTRA "$APP" >/dev/null 2>&1
 codesign --verify --deep --strict "$APP" && echo "signature ok"

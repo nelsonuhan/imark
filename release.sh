@@ -52,11 +52,6 @@ if [ "${1:-}" != "--force" ]; then
 			|| die "main and origin/main have diverged — push or pull first"
 	fi
 
-	# The app and the Quick Look extension both carry the version, and nothing
-	# complains when one of them stays behind.
-	Support/bump.sh --check >/dev/null \
-		|| die "the version is not the same in every file — see above"
-
 	# The suites, because a signed and notarised broken build is worse than an
 	# unsigned one: it carries somebody's name and opens without a warning.
 	node Support/test-math.mjs >/dev/null 2>&1 || die "the math tests failed"
