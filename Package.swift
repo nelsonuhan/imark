@@ -1,8 +1,8 @@
 // swift-tools-version: 6.0
 import PackageDescription
 
-// The .app bundle is assembled by build.sh — SwiftPM only produces the two
-// Mach-O executables that go inside it, plus the renderer they share.
+// The .app bundle is assembled by build.sh — SwiftPM only produces the
+// Mach-O executable that goes inside it, plus the renderer it uses.
 let package = Package(
     name: "Imark",
     platforms: [.macOS(.v14)],
@@ -17,15 +17,6 @@ let package = Package(
             dependencies: ["ImarkRender"],
             path: "Sources/Imark",
             swiftSettings: [.swiftLanguageMode(.v5)]
-        ),
-        .executableTarget(
-            name: "ImarkQuickLook",
-            dependencies: ["ImarkRender"],
-            path: "Sources/ImarkQuickLook",
-            swiftSettings: [.swiftLanguageMode(.v5)],
-            // App extensions are entered through NSExtensionMain rather than
-            // being started at main(), so the entry point moves.
-            linkerSettings: [.unsafeFlags(["-Xlinker", "-e", "-Xlinker", "_NSExtensionMain"])]
         ),
     ]
 )

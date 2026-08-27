@@ -9,8 +9,6 @@ public enum RendererMessage {
     case active(String)
     case meta(words: Int, minutes: Int)
     case find(count: Int, index: Int)
-    case wikilinks([String])
-    case openWiki(String)
     case openLocal(String)
     case openExternal(URL)
 }
@@ -29,16 +27,15 @@ public final class RendererView: NSView {
     public var onMessage: ((RendererMessage) -> Void)?
 
     private let bridge = Bridge()
-    private var previewMode = false
     /// Whether the front matter card is drawn. Shown unless something says
-    /// otherwise, so Quick Look and anything else that never sets it keep the
-    /// behaviour they have always had.
+    /// otherwise, so anything that never sets it keeps the behaviour it has
+    /// always had.
     private var frontMatter = true
 
     /// Which palette to ask the page for on each side of the system's light and
     /// dark switch. The names are `[data-theme]` values in the stylesheet, and
     /// the defaults are the two the page has always had — so anything that does
-    /// not set these, Quick Look included, behaves exactly as before.
+    /// not set these behaves exactly as before.
     public var palettes: (light: String, dark: String) = ("light", "dark")
 
     private var palette: String { isDarkMode ? palettes.dark : palettes.light }
@@ -88,7 +85,6 @@ public final class RendererView: NSView {
             "theme": palette,
             // Carried in the payload rather than sent separately: a standalone
             // call lands before the page is ready and is silently dropped.
-            "preview": previewMode,
             "frontMatter": frontMatter,
         ])
     }
@@ -99,10 +95,6 @@ public final class RendererView: NSView {
 
     public func scrollTo(anchor: String) {
         call("window.imark.scrollToAnchor", anchor)
-    }
-
-    public func markMissingWikiLinks(_ targets: [String]) {
-        call("window.imark.markMissing", targets)
     }
 
     /// How much of the page's top edge the toolbar covers. The document runs the
@@ -126,13 +118,6 @@ public final class RendererView: NSView {
     public func setFrontMatter(_ shown: Bool) {
         frontMatter = shown
         call("window.imark.setFrontMatter", shown)
-    }
-
-    /// Quick Look shows the same document in a much smaller panel: tighter
-    /// margins, no copy buttons, nothing clickable.
-    public func setPreviewMode() {
-        previewMode = true
-        call("window.imark.setPreview", true)
     }
 
     public func find(_ query: String) {
@@ -252,12 +237,6 @@ public final class RendererView: NSView {
                     count: body["count"] as? Int ?? 0,
                     index: body["index"] as? Int ?? 0
                 ))
-
-            case "wikilinks":
-                owner.onMessage?(.wikilinks(body["targets"] as? [String] ?? []))
-
-            case "openWiki":
-                if let target = body["target"] as? String { owner.onMessage?(.openWiki(target)) }
 
             case "openLocal":
                 if let path = body["path"] as? String { owner.onMessage?(.openLocal(path)) }

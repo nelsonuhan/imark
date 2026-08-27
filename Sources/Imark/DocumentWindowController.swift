@@ -31,17 +31,8 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate {
         // toolbar, which carries its own blur. A solid strip cuts a reading
         // window in two; a blurred one says there is more page up there.
         window.titlebarAppearsTransparent = true
-        // Obeys "prefer tabs when opening documents", which is somebody's
-        // stated preference and not ours to override. It only governs windows
-        // the system groups on its own: ⌘-clicking a file in the sidebar asks
-        // for its tab outright, and that still works at every setting. What
-        // this gives up is Finder double-clicks tabbing for people who left
-        // the preference on its default of full screen only.
-        window.tabbingMode = .automatic
-        // Every document window joins the same group. Without an identifier
-        // macOS groups by class name, which happens to work here and would stop
-        // working the moment a second kind of window wanted tabs.
-        window.tabbingIdentifier = "ImarkDocument"
+        // Every document is its own window. No tab bar to keep in sync with it.
+        window.tabbingMode = .disallowed
 
         super.init(window: window)
 
@@ -161,10 +152,6 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate {
         case .meta(let words, let minutes):
             content.setStatus(words: words, minutes: minutes)
 
-        case .wikilinks(let targets):
-            let dead = targets.filter { LinkRouter.resolveWiki($0, from: url) == nil }
-            if !dead.isEmpty { content.renderer.markMissingWikiLinks(dead) }
-
         case .openExternal(let target):
             NSWorkspace.shared.open(target)
 
@@ -174,13 +161,6 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate {
                 show(target, pushingHistory: true)
             } else {
                 NSWorkspace.shared.activateFileViewerSelecting([target])
-            }
-
-        case .openWiki(let name):
-            if let target = LinkRouter.resolveWiki(name, from: url) {
-                show(target, pushingHistory: true)
-            } else {
-                NSSound.beep()
             }
 
         case .ready, .rendered, .find:
@@ -207,12 +187,6 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate {
     @objc func toggleSidebar(_ sender: Any?) {
         sidebarItem.animator().isCollapsed.toggle()
         Settings.sidebarCollapsed = sidebarItem.isCollapsed
-    }
-
-    /// Gives the tab bar its + button and ⌘T. Without it macOS shows tabs but
-    /// no way to open another one, which reads as a broken tab bar.
-    override func newWindowForTab(_ sender: Any?) {
-        (NSApp.delegate as? AppDelegate)?.openDocument(sender)
     }
 
     /// Whatever is selected goes into the search field. Selecting a phrase and

@@ -17,23 +17,8 @@ public final class SchemeHandler: NSObject, WKURLSchemeHandler {
 
     public override init() { super.init() }
 
-    /// The Quick Look extension carries its own copy of the renderer: it runs
-    /// sandboxed, and reaching up into the containing app's Resources is not
-    /// something the sandbox reliably allows. Fall back to walking up anyway,
-    /// so a bundle built without the copy still works.
     private static func resourcesDirectory() -> URL {
-        let bundle = Bundle.main
-        if let own = bundle.resourceURL,
-           FileManager.default.fileExists(atPath: own.appendingPathComponent("index.html").path) {
-            return own
-        }
-        if bundle.bundleURL.pathExtension == "appex" {
-            return bundle.bundleURL
-                .deletingLastPathComponent()    // PlugIns
-                .deletingLastPathComponent()    // Contents
-                .appendingPathComponent("Resources")
-        }
-        return bundle.resourceURL ?? bundle.bundleURL
+        Bundle.main.resourceURL ?? Bundle.main.bundleURL
     }
 
     public func webView(_ webView: WKWebView, start task: WKURLSchemeTask) {

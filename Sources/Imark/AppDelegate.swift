@@ -58,7 +58,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Launch Services hands us documents here — Finder double-click, drag onto
-    /// the Dock icon, and `open -a Imark file.md` all land in this method.
+    /// the Dock icon, and `open -a imark file.md` all land in this method.
     func application(_ application: NSApplication, open urls: [URL]) {
         for url in urls { open(url) }
     }
@@ -69,11 +69,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Windows
 
-    /// `host` asks for the document to land as a tab beside that window rather
-    /// than wherever the window server would have put it. Said outright instead
-    /// of left to `tabbingMode`, which answers to a system-wide preference we
-    /// do not get to see and should not be second-guessing.
-    func open(_ url: URL, asTabIn host: NSWindow? = nil) {
+    func open(_ url: URL) {
         let key = url.resolvingSymlinksInPath().standardizedFileURL
         dismissWelcome()
 
@@ -91,24 +87,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         controllers.append(controller)
 
-        // Added to the group before it is shown: ordering it front first makes
-        // it a window for an instant, and it keeps that window's shadow and
-        // frame after joining.
-        if let host, let window = controller.window {
-            host.addTabbedWindow(window, ordered: .above)
-            window.makeKeyAndOrderFront(nil)
-        } else {
-            controller.showWindow(nil)
-            controller.window?.makeKeyAndOrderFront(nil)
+        controller.showWindow(nil)
+        controller.window?.makeKeyAndOrderFront(nil)
 
-            // Every document window restores the same autosaved frame, so
-            // without this a second document lands exactly on top of the first
-            // and looks like nothing happened. A window that joined a tab group
-            // has no frame of its own to move, so cascading it would fight the
-            // tab bar.
-            if controllers.count > 1, let window = controller.window, window.tabGroup == nil {
-                cascadePoint = window.cascadeTopLeft(from: cascadePoint)
-            }
+        // Every document window restores the same autosaved frame, so without
+        // this a second document lands exactly on top of the first and looks
+        // like nothing happened.
+        if controllers.count > 1, let window = controller.window {
+            cascadePoint = window.cascadeTopLeft(from: cascadePoint)
         }
         NSDocumentController.shared.noteNewRecentDocumentURL(key)
     }
