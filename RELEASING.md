@@ -46,12 +46,10 @@ Set the version, commit, push:
 Support/bump.sh 0.2.4
 ```
 
-The version is written in four files — the app, the Quick Look extension and the
-two manifests Claude Code reads to install the plugin — and one command writes
-all four. `Support/bump.sh --check` says whether they agree; the release refuses
-to build when they do not, because the marketplace would go on offering an old
-number for a new app. Nothing else needs editing: the site reads the version,
-the notes and the `.dmg` size off the GitHub release.
+The version is written in two files — the app and the Quick Look extension —
+and one command writes both. `Support/bump.sh --check` says whether they agree;
+the release refuses to build when they do not. Nothing else needs editing: the
+site reads the version, the notes and the `.dmg` size off the GitHub release.
 
 Then:
 
@@ -62,7 +60,7 @@ IMARK_NOTARY_PROFILE=imark \
 ```
 
 The script refuses to run unless the tree is clean, the branch is `main`, `main`
-matches `origin/main`, and all five test suites pass. That gate exists because a
+matches `origin/main`, and the test suites pass. That gate exists because a
 signed, notarised, broken build is worse than an unsigned one: it carries
 somebody's name and opens without a warning. `--force` skips the gate and is for
 when you know exactly why.

@@ -16,23 +16,9 @@ Run the suites. `./release.sh` refuses to build if any of them fail, so a change
 that breaks one cannot ship anyway.
 
 ```bash
-Support/test-review.sh
-swiftc -parse-as-library -I .build/debug/Modules \
-  $(find Sources/Imark -name '*.swift' ! -name main.swift) \
-  $(find Sources/ImarkRender -name '*.swift') \
-  Support/test-editor.swift -o /tmp/imark-test-editor && /tmp/imark-test-editor
-node Support/test-notes.mjs
-node Support/test-export.mjs
 node Support/test-math.mjs
-swift Support/test-plus.swift
-```
-
-The rest of the suites, the ones a release runs:
-
-```bash
-swiftc -parse-as-library Sources/Imark/Comments.swift Sources/Imark/NoteColour.swift \
-  Support/test-comments.swift -o /tmp/imark-test && /tmp/imark-test
-Support/test-setup.sh
+swiftc -parse-as-library Sources/Imark/Updates.swift Sources/Imark/Settings.swift \
+  Support/test-update.swift -o /tmp/imark-test-update && /tmp/imark-test-update
 ```
 
 ## Where things are
@@ -45,7 +31,6 @@ renderer/                JavaScript source
 Resources/               build output — not edited by hand
 Support/                 Info.plist, entitlements, generators, and tests
 testdata/                documents that exercise the renderer
-plugin/                  the Claude Code plugin — uses the app, is not part of it
 ```
 
 The renderer is the only part that knows how to turn Markdown into anything. The
@@ -53,9 +38,6 @@ Swift side handles windows, files and navigation, and talks to it in messages
 over a private `imark://` scheme, so images beside a document load without
 opening `file://` to the page. There is no `.xcodeproj`: Swift Package Manager
 compiles it and `build.sh` assembles the `.app`.
-
-`plugin/` is the single source for the agent files, copied into the app at build
-time. Editing the copy inside `Imark.app` changes nothing in the repo.
 
 The app icon is drawn in code from the rules in the design document:
 
@@ -72,31 +54,9 @@ one window:
 screencapture -x -o -l"$(swift Support/window-id.swift Imark)" shot.png
 ```
 
-## The review handshake: test the second round
-
-Everything about a review passes through `~/.imark/pending`, and that directory
-is the only state in Imark that outlives the thing that made it. A review that
-is never answered — the session closed, the process killed — leaves its request
-there, and 0.2.2 shipped an app that answered the leftover instead of the
-review the reviewer was looking at. The agent waited four hours for a decision
-that had already been made. Every suite passed: all of them reviewed a clean
-document once.
-
-So a change to `Review.swift` or to the handshake in `plugin/scripts/imark.mjs`
-is not tested until it is tested **twice over the same document, with a
-leftover in the directory**. Three cases in `Support/test-review.sh` hold that
-line — the abandoned round, the interrupted one, the sweep — and a fourth
-belongs there before the next one gets fixed.
-
-The one step no suite reaches is the press itself: a synthetic click needs
-accessibility permission a terminal does not have. Approve, Send Back, and
-closing the window without deciding have to be tried by hand, in a build, on a
-real review, before a release goes out.
-
 ## What this is not
 
-- **Not an editor.** Imark reads. Comments are the one thing it writes, and that
-  is deliberate — your editor is better at editing than this will ever be.
+- **Not an editor.** Imark reads, and writes nothing to your files.
 - **Not cross-platform.** It is AppKit and a WebView, and the Quick Look
   extension only exists on macOS.
 - **Not a vault.** No database, no index, no folder structure it insists on.
