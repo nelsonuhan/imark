@@ -201,6 +201,20 @@ const patchAttr = (rules, rule, attr) => {
 patchAttr(md.renderer.rules, 'image', 'src')
 patchAttr(md.renderer.rules, 'link_open', 'href')
 
+// The two rules above only see markdown's own `![]()`/`[]()` — raw HTML
+// (`<img src="...">` centred in a `<p align="center">`, say) goes through
+// markdown-it untouched, so it needs the same rewrite applied to the DOM
+// once the elements exist. Skipped in three cases: `#...` (in-page), already
+// `imark:` (nothing left to do — matters for elements the rules above
+// already rewrote), and external, same as the rules above.
+function patchRawAttr(root, selector, attr) {
+  for (const el of root.querySelectorAll(selector)) {
+    const value = el.getAttribute(attr)
+    if (!value || value.startsWith('#') || value.startsWith('imark:') || isExternal(value)) continue
+    el.setAttribute(attr, fileURL(resolveLocal(value)))
+  }
+}
+
 /* ------------------------------------------------------- front matter */
 
 function splitFrontMatter(text) {
@@ -423,6 +437,9 @@ async function render({ markdown, path, theme, preview, frontMatter }) {
     ? renderFrontMatter(data) + md.render(body)
     : `${renderFrontMatter(data)}<p class="empty">This file is empty</p>`
   if (token !== renderToken) return
+
+  patchRawAttr(root, 'img', 'src')
+  patchRawAttr(root, 'a:not(.wikilink)', 'href')
 
   // The highlight elements went out with the old DOM.
   matches = []
