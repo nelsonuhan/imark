@@ -28,9 +28,7 @@ appears here, and the word anchor appears again in this same sentence.
 
 An [external link](https://example.com) opens in your browser. A
 [local one](./showcase.md) opens in the same window, with back and forward
-history. A wiki-link to [[exemplo]] resolves against this folder; a wiki-link
-to [[a note that is not here]] is marked as dead rather than silently doing
-nothing.
+history.
 
 ### Quotes
 
@@ -111,7 +109,7 @@ whole page sideways:
 | Bigger / Smaller Text | `⌘+` / `⌘-` | Changes the text size | Never | 0.1 |
 | Toggle Sidebar | `⌘\` | Shows or hides the outline | Never | 0.1 |
 | Reload | `⌘R` | Reads the file again | Never | 0.1 |
-| Back / Forward | `⌘[` / `⌘]` | Steps through wiki-link history | No history in that direction | 0.1 |
+| Back / Forward | `⌘[` / `⌘]` | Steps through local-link history | No history in that direction | 0.1 |
 
 ## Lists
 
@@ -138,7 +136,7 @@ Tasks, which are clickable:
 - [x] Line map with `data-line`
 - [x] Collapsible outline
 - [x] Live reload
-- [x] Wiki-links
+- [x] Local links
 - [ ] A Developer ID certificate
 - [ ] Somebody else's Mac
 

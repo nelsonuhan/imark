@@ -16,7 +16,7 @@ Texto de **teste** com _ênfase_ e um [link externo](https://example.com).
 - [ ] tarefa por fazer
 - [x] tarefa feita
 
-Ligação wiki: [[notas-reuniao]] e [[exemplo|com etiqueta]].
+Ligação local: [showcase](./showcase.md).
 
 | Coluna | Valor |
 |---|---|

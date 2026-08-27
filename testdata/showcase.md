@@ -59,11 +59,9 @@ diagrams do not glow white in the middle of a dark page.
 
 ```mermaid
 graph LR
-  A[Finder] -->|space bar| B[Quick Look]
-  A -->|double click| C[Imark]
-  B --> D[Shared renderer]
-  C --> D
-  D --> E[WKWebView]
+  A[Finder] -->|double click| B[imark]
+  B --> C[Renderer]
+  C --> D[WKWebView]
 ```
 
 ```mermaid
@@ -85,8 +83,7 @@ twice. Inline `code` sits on a tinted chip, ~~struck text~~ stays legible, and
 links like [daringfireball.net](https://daringfireball.net) open in your
 browser rather than trapping you inside a reader.
 
-Wiki-links resolve against the folder: [[changelog]] opens the file next door,
-while [[a-note-that-does-not-exist]] stays red and inert rather than pretending.
+A local link opens the file next door in the same window: [changelog](./changelog.md).
 
 > Typography is the craft of endowing human language with a durable visual
 > form. A reader should never notice it working.
@@ -97,8 +94,6 @@ while [[a-note-that-does-not-exist]] stays red and inert rather than pretending.
 |---|---|---|
 | Live reload | `FileWatcher.swift` | Debounced at 120ms |
 | Outline | `SidebarViewController.swift` | Folds past 20 entries |
-| Wiki-links | `LinkRouter.swift` | Exact neighbour beats a fuzzy match |
-| Quick Look | `ImarkQuickLook` | Shares the renderer with the app |
 
 ## Lists
 
