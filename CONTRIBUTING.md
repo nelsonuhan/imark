@@ -25,11 +25,10 @@ swiftc -parse-as-library Sources/Imark/Updates.swift Sources/Imark/Settings.swif
 
 ```
 Sources/Imark/           the app
-Sources/ImarkQuickLook/  the Quick Look extension
-Sources/ImarkRender/     the renderer both of them share
+Sources/ImarkRender/     the renderer it uses
 renderer/                JavaScript source
 Resources/               build output — not edited by hand
-Support/                 Info.plist, entitlements, generators, and tests
+Support/                 Info.plist, generators, and tests
 testdata/                documents that exercise the renderer
 ```
 
@@ -57,8 +56,7 @@ screencapture -x -o -l"$(swift Support/window-id.swift imark)" shot.png
 ## What this is not
 
 - **Not an editor.** imark reads, and writes nothing to your files.
-- **Not cross-platform.** It is AppKit and a WebView, and the Quick Look
-  extension only exists on macOS.
+- **Not cross-platform.** It is AppKit and a WebView.
 - **Not a vault.** No database, no index, no folder structure it insists on.
 
 Changes that pull in any of those three directions are not going to be merged,

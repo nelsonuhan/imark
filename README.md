@@ -1,9 +1,9 @@
 > [!NOTE]
 > This is a personal fork of [Imark](https://github.com/migsilva89/imark),
 > stripped down to just a Markdown renderer/reader. Gone: the editor mode,
-> comments/annotations, the agent-review workflow, and the sidebar's file
-> browser. What's left: rendering, a collapsible outline, live reload, Quick
-> Look, wiki-links, tabs, and find.
+> comments/annotations, the agent-review workflow, the sidebar's file browser,
+> the outline rail, Quick Look, wiki-links, and tabs. What's left: rendering,
+> a collapsible outline, live reload, and find.
 
 <p align="center">
   <img src=".github/assets/app-icon.png" width="128" height="128" alt="imark app icon">
@@ -13,9 +13,9 @@
 
 <p align="center">
   <strong>Native Markdown reader for macOS.</strong><br><br>
-  Double-click a <code>.md</code> file and it opens rendered, reloads itself while you<br>
-  edit elsewhere, and previews in the Finder with the space bar. Nothing leaves<br>
-  the machine, and nothing here writes to your files.
+  Double-click a <code>.md</code> file and it opens rendered, reloading itself<br>
+  while you edit elsewhere. Nothing leaves the machine, and nothing here<br>
+  writes to your files.
 </p>
 
 <p align="center">
@@ -32,35 +32,28 @@
 
 ## What it does
 
-- **Quick Look previews** — the space bar in the Finder renders the document, not raw text, using the same engine as the app
 - **Live reload** — saving in your editor updates the view in under 300ms, keeping your scroll position, and it survives the delete-and-rename that editors call an atomic save
 - **Foldable outline** — headings in the sidebar, with sections you can collapse; past twenty entries it opens folded, so a changelog is one row per version
-- **Wiki-links** — `[[note]]` resolves against the folder and opens in the same window, with back and forward history
+- **Local links** — a relative link to another `.md` opens in the same window, with back and forward history
 - **Everything GitHub-flavoured** — tables, task lists, footnotes, front matter as a header card you can put away from the View menu, syntax highlighting, Mermaid diagrams, KaTeX maths
 - **Find with a counter** — `⌘F` highlights every hit and tells you which one you are on
-- **Tabs** — several documents in one window, with everything macOS gives a tabbed app: `⌘⇧[` and `⌘⇧]`, drag a tab out, Merge All Windows
 - **Offline where it counts** — documents render with every request blocked by a content security policy, KaTeX fonts embedded, remote images refused on purpose
 
 ## Screenshots
 
 > [!NOTE]
-> The screenshots below are from before this fork's stripping pass and still
-> show the file browser, the editor toggle, and the outline rail — all gone
-> now. Pending a retake.
-
-| Document window | Quick Look preview |
-|:---:|:---:|
-| ![A document window with the outline sidebar and syntax-highlighted code](.github/assets/imark-window.png) | ![The Finder preview panel](.github/assets/imark-quicklook.png) |
-
-Both are rendering [`testdata/showcase.md`](testdata/showcase.md). For the full
-sweep — every construction, and enough headings that the outline folds itself —
-open [`testdata/everything.md`](testdata/everything.md).
+> The screenshot below is from before this fork's stripping pass and still
+> shows the file browser, the editor toggle, and the outline rail — all gone
+> now, along with Quick Look, which is what the rest of the old screenshots
+> showed. Pending a retake.
 
 <p align="center">
-  <img src=".github/assets/quicklook.gif" width="720" alt="Pressing the space bar in Finder and stepping through markdown files in the preview panel">
+  <img src=".github/assets/imark-window.png" width="720" alt="A document window with the outline sidebar and syntax-highlighted code">
 </p>
 
-<p align="center"><em>Space bar in the Finder. No app to open first.</em></p>
+Rendering [`testdata/showcase.md`](testdata/showcase.md). For the full sweep —
+every construction, and enough headings that the outline folds itself — open
+[`testdata/everything.md`](testdata/everything.md).
 
 ## Install
 
@@ -129,15 +122,6 @@ Swift 6 with AppKit and no external Swift dependencies, around a WKWebView that
 only ever renders; markdown-it, highlight.js, Mermaid and KaTeX are bundled
 offline with esbuild. [`CONTRIBUTING.md`](CONTRIBUTING.md) has the layout of the
 repository, the test suites and how to run them.
-
-## FAQ
-
-### Why does the Quick Look extension need the network entitlement?
-
-It does not use the network. WebKit refuses to start its WebContent process
-inside a sandboxed app extension without `com.apple.security.network.client`,
-even when every byte is served from a local scheme. The panel stays blank without
-it, with no error and no log entry.
 
 ## Security, contributing, licence
 

@@ -46,9 +46,8 @@ Set the version, commit, push:
 Support/bump.sh 0.2.4
 ```
 
-The version is written in two files — the app and the Quick Look extension —
-and one command writes both. `Support/bump.sh --check` says whether they agree;
-the release refuses to build when they do not.
+`Support/bump.sh --check` prints the version currently on disk, without
+changing anything.
 
 Then:
 
