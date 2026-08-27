@@ -11,18 +11,6 @@ import mermaid from 'mermaid'
 
 import math from './math.js'
 import wikilink from './wikilink.js'
-import {
-  attachComments,
-  attached as attachedNotes,
-  buildNoteRail,
-  extractComments,
-  installCommentHandlers,
-  isReviewing,
-  restoreNoteState,
-  setReviewing as applyReviewing,
-  stepNote,
-  toVisibleText,
-} from './comments.js'
 import './style.css'
 
 const bridge = (payload) => {
@@ -102,10 +90,8 @@ md.use(anchor, { slugify, permalink: false, tabIndex: false })
   .use(mark)
   .use(wikilink)
 
-// Every block token knows which lines of the source produced it. Emitting that
-// into the DOM is what lets a selection on screen be turned back into a
-// position in the file — without it, writing anything next to a paragraph is
-// guesswork.
+// Every block token knows which lines of the source produced it, stamped onto
+// the DOM as `data-line`.
 // The front matter is stripped before parsing, so markdown-it counts from the
 // body while the file counts from the top. Everything it reports is short by
 // however many lines the front matter took.
@@ -272,11 +258,10 @@ function applyFrontMatter(shown) {
 function setFrontMatter(shown) {
   applyFrontMatter(shown)
   // The card's height comes out of the page with it, so everything below moves
-  // — and the rails are drawn from where things were. Without this the heading
-  // tick and the note mark stay at the old height, pointing above their words.
-  // A render does this for itself, further down; a toggle has nothing else.
+  // — and the rail is drawn from where things were. Without this the heading
+  // tick stays at the old height, pointing above its words. A render does this
+  // for itself, further down; a toggle has nothing else.
   buildRail(content())
-  buildNoteRail()
 }
 
 /* --------------------------------------------------------------- mermaid */
@@ -530,39 +515,10 @@ function updateRail(centre) {
 
 /* ---------------------------------------------------------- rail tooltip */
 
-// A comment card lives inside the block it is attached to, so the plain text of
-// a block is not its text content any more — without this the preview quoted
-// somebody's note back as if it were the document.
-const flatten = (el) => {
-  const copy = el.cloneNode(true)
-  for (const note of copy.querySelectorAll('.note-card, .note-dot, .note-actions')) note.remove()
-  return copy.textContent.replace(/\s+/g, ' ').trim()
-}
-
-// A commented block is wrapped, so its neighbours are the wrapper's neighbours.
-const outermost = (el) =>
-  el.parentElement?.classList.contains('note-holder') ? el.parentElement : el
+const flatten = (el) => el.textContent.replace(/\s+/g, ' ').trim()
 
 const headingIn = (el) =>
   /^H[1-6]$/.test(el.tagName) ? el : el.querySelector('h1, h2, h3, h4, h5, h6')
-
-/// How many notes fall under this heading, down to the next one at the same
-/// level or higher. The rail on the other edge says where the notes are; this
-/// says whether the section you are about to jump to has any, which is the
-/// question you have while reading the outline.
-function notesInSection(heading) {
-  const start = outermost(heading)
-  const level = headingLevel(heading)
-  let count = start.querySelectorAll('.note-dot').length
-
-  for (let node = start.nextElementSibling; node; node = node.nextElementSibling) {
-    const inner = headingIn(node)
-    const innerLevel = inner ? headingLevel(inner) : 0
-    if (innerLevel > 0 && innerLevel <= level) break
-    count += node.querySelectorAll('.note-dot').length
-  }
-  return count
-}
 
 function tipContent(index) {
   const heading = railBlocks[index]
@@ -572,7 +528,7 @@ function tipContent(index) {
   // to come from the DOM rather than from railBlocks — the prose that follows
   // is no longer in the list.
   let body = ''
-  let sibling = outermost(heading).nextElementSibling
+  let sibling = heading.nextElementSibling
   while (sibling && !headingIn(sibling)) {
     body = flatten(sibling)
     if (body) break
@@ -585,7 +541,6 @@ function tipContent(index) {
     label: `${Math.round(position * 100)}% in`,
     title: flatten(heading),
     body,
-    notes: notesInSection(heading),
   }
 }
 
@@ -598,12 +553,6 @@ function showTip(index, tick) {
 
   const label = document.createElement('em')
   label.textContent = content.label
-  if (content.notes) {
-    const badge = document.createElement('i')
-    badge.className = 'rail-tip-notes'
-    badge.textContent = content.notes === 1 ? '1 comment' : `${content.notes} comments`
-    label.appendChild(badge)
-  }
   railTip.appendChild(label)
 
   const heading = document.createElement('strong')
@@ -765,12 +714,8 @@ const content = () => document.getElementById('content')
 let activeHeadings = []
 let renderToken = 0
 
-// Kept so comments can be exported without asking Swift to hand the file back.
-let lastSource = ''
-
 async function render({ markdown, path, theme, preview, rail, frontMatter }) {
   const token = ++renderToken
-  lastSource = markdown ?? ''
   docDir = path ? path.slice(0, path.lastIndexOf('/')) || '/' : '/'
   slugCounts.clear()
 
@@ -792,18 +737,10 @@ async function render({ markdown, path, theme, preview, rail, frontMatter }) {
   const root = content()
   const previousScroll = window.scrollY
 
-  // Taken out before parsing so the blocks can never show up as document text,
-  // and blanked rather than deleted so the line map stays honest.
-  const { body: clean, comments } = extractComments(body, offset)
-
-  root.innerHTML = clean.trim()
-    ? renderFrontMatter(data) + md.render(clean)
+  root.innerHTML = body.trim()
+    ? renderFrontMatter(data) + md.render(body)
     : `${renderFrontMatter(data)}<p class="empty">This file is empty</p>`
   if (token !== renderToken) return
-
-  const notes = attachComments(root, comments)
-  restoreNoteState()
-  bridge({ type: 'comments', count: notes.length, reviewing: isReviewing(), items: notes })
 
   // The highlight elements went out with the old DOM.
   matches = []
@@ -812,9 +749,6 @@ async function render({ markdown, path, theme, preview, rail, frontMatter }) {
   addCopyButtons(root)
   activeHeadings = buildToc(root)
   buildRail(root)
-  // After the outline rail, never before: the marks are placed against its
-  // ticks, and ticks that do not exist yet put every note at the top.
-  buildNoteRail()
   await renderMermaid(root, theme)
   if (token !== renderToken) return
 
@@ -866,249 +800,6 @@ window.addEventListener(
   },
   { passive: true },
 )
-
-/* ------------------------------------------------------------- selection */
-
-const lineRange = (el) => {
-  const raw = el?.getAttribute?.('data-line')
-  if (!raw) return null
-  const [start, end] = raw.split(',').map(Number)
-  return Number.isFinite(start) && Number.isFinite(end) ? { start, end } : null
-}
-
-function selectionInfo() {
-  const selection = window.getSelection()
-  if (!selection || selection.isCollapsed || selection.rangeCount === 0) return null
-
-  const text = selection.toString().trim()
-  if (!text) return null
-
-  const range = selection.getRangeAt(0)
-  const root = content()
-  if (!root.contains(range.commonAncestorContainer)) return null
-
-  // Text inside a note is not document text: it has no line of its own, and
-  // offering to comment on a comment is not a thing worth building.
-  const within =
-    range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
-      ? range.commonAncestorContainer
-      : range.commonAncestorContainer.parentElement
-  if (within?.closest('.note-card')) return null
-
-  const rect = range.getBoundingClientRect()
-  if (!rect.width && !rect.height) return null
-
-  const start =
-    range.startContainer.nodeType === Node.ELEMENT_NODE
-      ? range.startContainer
-      : range.startContainer.parentElement
-
-  // Two ranges: the tightest element that knows its lines, and the top-level
-  // block it belongs to. A comment is written after the block; the tighter one
-  // is what a quote should be looked for in.
-  let block = start
-  while (block && block.parentElement !== root && block.parentElement) {
-    // A commented block is wrapped, so the top-level element is one step
-    // further out than it used to be.
-    if (block.parentElement.classList.contains('note-holder')) break
-    block = block.parentElement
-  }
-
-  return {
-    type: 'selection',
-    text,
-    rect: { x: rect.left, y: rect.top, width: rect.width, height: rect.height },
-    inline: lineRange(start?.closest('[data-line]')),
-    block: lineRange(block),
-    // Which copy of these exact words inside the block this is. Written into
-    // the note as nth= so two comments on the same word stay apart.
-    occurrence: countBefore(block, range, text),
-  }
-}
-
-/// How many times the selected text already appeared in this block before the
-/// point where the selection starts, plus one.
-function countBefore(block, range, text) {
-  if (!block || !text) return 1
-  const before = document.createRange()
-  before.selectNodeContents(block)
-  try {
-    before.setEnd(range.startContainer, range.startOffset)
-  } catch {
-    return 1
-  }
-  return before.toString().split(text).length
-}
-
-/* ------------------------------------------------------ comment on a block */
-
-/// The `+` in the margin. One button that follows the block under the pointer,
-/// rather than one per paragraph: a document is thousands of blocks, and most
-/// of them are never hovered.
-///
-/// It exists because commenting on a whole paragraph through a selection is
-/// work pretending to be precision — you pick some words arbitrarily just to
-/// have somewhere to hang the note. A block note has no `quote=` at all: the
-/// note is written directly after the block, so its position already says which
-/// one it is, and it can never come loose the way a quote can.
-let plusButton = null
-let plusTarget = null
-/// Hiding is delayed, because the way to the button leads out of the text: the
-/// pointer crosses the margin, which belongs to no block, and hiding on the
-/// first frame outside meant the button vanished exactly as you reached for it.
-let plusHideTimer = 0
-
-const cancelHide = () => clearTimeout(plusHideTimer)
-const scheduleHide = () => {
-  clearTimeout(plusHideTimer)
-  plusHideTimer = setTimeout(hidePlus, 220)
-}
-
-/// The block on the same line as the pointer, whatever the pointer is actually
-/// over. A reading column is centred and narrow, so most of the window beside a
-/// paragraph belongs to nothing — and aiming at the words to reach a button
-/// that lives in the margin is backwards.
-///
-/// Bounded rather than the whole width: the rails sit at the window edges and
-/// have their own hover behaviour to answer for.
-function blockAtHeight(clientX, clientY) {
-  const root = content()
-  const box = root.getBoundingClientRect()
-  // Never into the outer strip, whatever the reach works out to: the rails live
-  // there and answer to the pointer themselves. On a narrow window this is what
-  // decides, and the reach never comes into it.
-  const from = Math.max(box.left - PLUS_REACH, RAIL_GUTTER)
-  const to = Math.min(box.right + PLUS_REACH, window.innerWidth - RAIL_GUTTER)
-  if (clientX < from || clientX > to) return null
-  for (const child of root.children) {
-    if (!lineRange(child)) continue
-    const rect = child.getBoundingClientRect()
-    if (clientY >= rect.top && clientY <= rect.bottom) return child
-  }
-  return null
-}
-
-/// How far past the text column the `+` still answers, in points.
-const PLUS_REACH = 120
-/// And how much of each edge it never touches, because the rails are there.
-const RAIL_GUTTER = 56
-
-const topLevelBlock = (node) => {
-  const root = content()
-  let block = node
-  while (block && block.parentElement !== root && block.parentElement) {
-    if (block.parentElement.classList.contains('note-holder')) break
-    block = block.parentElement
-  }
-  return block?.parentElement === root || block?.parentElement?.classList.contains('note-holder')
-    ? block
-    : null
-}
-
-function hidePlus() {
-  plusTarget?.classList.remove('block-target', 'block-armed')
-  plusTarget = null
-  if (plusButton) plusButton.style.display = 'none'
-}
-
-function showPlus(block) {
-  if (!plusButton) return
-  if (plusTarget === block) return
-  plusTarget?.classList.remove('block-target', 'block-armed')
-  plusTarget = block
-  // Lit as soon as the button appears, not only once the pointer reaches it.
-  // Waiting meant the highlight never showed at all if you never got there.
-  block.classList.add('block-target')
-
-  const rect = block.getBoundingClientRect()
-  plusButton.style.display = 'flex'
-  plusButton.style.top = `${rect.top + 1}px`
-  plusButton.style.left = `${Math.max(4, rect.left - 34)}px`
-}
-
-function setUpBlockPlus() {
-  plusButton = document.createElement('button')
-  plusButton.type = 'button'
-  plusButton.className = 'block-plus'
-  plusButton.textContent = '+'
-  plusButton.setAttribute('aria-label', 'Comment on this block')
-  plusButton.style.display = 'none'
-  document.body.appendChild(plusButton)
-
-  plusButton.addEventListener('mouseenter', () => {
-    cancelHide()
-    plusTarget?.classList.add('block-armed')
-  })
-  plusButton.addEventListener('mouseleave', () => {
-    plusTarget?.classList.remove('block-armed')
-    scheduleHide()
-  })
-
-  plusButton.addEventListener('click', () => {
-    const block = plusTarget
-    const lines = lineRange(block)
-    if (!block || !lines) return
-    const rect = block.getBoundingClientRect()
-    block.classList.add('block-target')
-    // The same message a selection sends, with no text. Everything downstream
-    // already carries the quote through as a string; empty means "the block".
-    bridge({
-      type: 'selection',
-      text: '',
-      rect: { x: rect.left, y: rect.top, width: rect.width, height: Math.min(rect.height, 24) },
-      inline: lines,
-      block: lines,
-      occurrence: 1,
-    })
-  })
-
-  document.addEventListener('mousemove', (event) => {
-    // The Quick Look panel renders with the same bundle and cannot write to
-    // anything. Existing notes still show — that is reading — but offering a
-    // way to add one there is offering something that cannot happen.
-    if (document.documentElement.dataset.preview === 'true') return hidePlus()
-    if (event.target === plusButton) return cancelHide()
-    // Not while a selection is live: the popover is already open on words the
-    // reader chose, and a second way in would fight it.
-    if (hadSelection) return hidePlus()
-    // By line first, so the whole width of the reading area answers; the
-    // element under the pointer only decides it when the two disagree, which
-    // is inside a note card or a holder.
-    const onText = content().contains(event.target) ? topLevelBlock(event.target) : null
-    const block = onText ?? blockAtHeight(event.clientX, event.clientY)
-    if (!block || !lineRange(block)) return scheduleHide()
-    cancelHide()
-    showPlus(block)
-  })
-
-  // Fixed positioning against a rect taken once — scrolling moves the block out
-  // from under it, so it goes away and comes back on the next move.
-  document.addEventListener('scroll', hidePlus, true)
-}
-
-function clearBlockTarget() {
-  document.querySelectorAll('.block-target').forEach((el) => el.classList.remove('block-target'))
-  hidePlus()
-}
-
-let selectionTimer = 0
-let hadSelection = false
-
-document.addEventListener('selectionchange', () => {
-  clearTimeout(selectionTimer)
-  // Debounced: a drag fires this on every pixel, and the popover should appear
-  // when the hand stops, not chase it across the paragraph.
-  selectionTimer = setTimeout(() => {
-    const info = selectionInfo()
-    if (info) {
-      hadSelection = true
-      bridge(info)
-    } else if (hadSelection) {
-      hadSelection = false
-      bridge({ type: 'selectionCleared' })
-    }
-  }, 180)
-})
 
 /* ----------------------------------------------------------- link routing */
 
@@ -1243,7 +934,6 @@ window.imark = {
     if (side) document.documentElement.dataset.rail = side
     else delete document.documentElement.dataset.rail
     buildRail(content())
-    buildNoteRail()
   },
   find: runFind,
   findStep: step,
@@ -1256,13 +946,6 @@ window.imark = {
   /// that runs to the top edge runs under the toolbar.
   setTopInset(points) {
     document.documentElement.style.setProperty('--top-inset', `${points}px`)
-    buildNoteRail()
-  },
-  clearSelection() {
-    window.getSelection()?.removeAllRanges()
-    // The block lit up by the `+` is not a selection and would otherwise stay
-    // lit after the popover closed.
-    clearBlockTarget()
   },
   markMissing(targets) {
     const dead = new Set(targets)
@@ -1270,30 +953,7 @@ window.imark = {
       if (dead.has(link.dataset.wikilink)) link.dataset.missing = 'true'
     }
   },
-  setReviewing(on) {
-    applyReviewing(on)
-    // The notes have to go with it. Announcing a count and no items left the
-    // app believing the document had none: the status bar read zero, every
-    // comment command greyed out, and the switch that had just been turned on
-    // could not be turned off again.
-    const items = attachedNotes()
-    bridge({ type: 'comments', count: items.length, reviewing: on, items })
-  },
-  stepNote,
-  exportComments: () => toVisibleText(lastSource),
-  /// Opens the note that was just written, so a comment lands visibly rather
-  /// than silently changing a file.
-  revealNote(index) {
-    const dots = [...document.querySelectorAll('.note-dot')]
-    const dot = dots[index] ?? dots[dots.length - 1]
-    if (!dot) return
-    dot.scrollIntoView({ block: 'center', behavior: 'smooth' })
-    dot.click()
-  },
 }
-
-installCommentHandlers()
-setUpBlockPlus()
 
 // KaTeX is imported for its side-effect-free API; keep a reference so the
 // bundler cannot tree-shake the font-bearing CSS away.

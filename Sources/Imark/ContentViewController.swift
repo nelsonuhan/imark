@@ -5,13 +5,9 @@ import ImarkRender
 /// underneath. Owns the renderer and forwards its messages upward.
 final class ContentViewController: NSViewController {
     let renderer = RendererView(frame: .zero)
-    /// The same document as text. Built with the pane rather than on demand so
-    /// the switch between reading and editing is instant and keeps its scroll.
-    let editor = MarkdownEditorView(frame: .zero)
 
     var onMessage: ((RendererMessage) -> Void)?
     var onFindClosed: (() -> Void)?
-    var onShowComments: ((NSView) -> Void)?
 
     private let findBar = NSVisualEffectView()
     /// Sits behind the toolbar and blurs whatever scrolls under it. Without it a
@@ -21,7 +17,6 @@ final class ContentViewController: NSViewController {
     private let searchField = NSSearchField()
     private let counter = NSTextField(labelWithString: "")
     private let statusLeft = NSTextField(labelWithString: "")
-    private let commentsButton = LinkButton(title: "", target: nil, action: nil)
     private let statusRight = NSTextField(labelWithString: "")
     private var findHeight: NSLayoutConstraint!
     private var folder = ""
@@ -36,12 +31,10 @@ final class ContentViewController: NSViewController {
         // Back to front: the document runs the full height and everything else
         // sits over it. The header is what makes that readable — it blurs the
         // text passing underneath so the toolbar has something to stand on.
-        for subview in [renderer, editor, header, findBar, status] {
+        for subview in [renderer, header, findBar, status] {
             subview.translatesAutoresizingMaskIntoConstraints = false
             view.addSubview(subview)
         }
-
-        editor.isHidden = true
 
         header.material = .headerView
         header.blendingMode = .withinWindow
@@ -68,14 +61,6 @@ final class ContentViewController: NSViewController {
             renderer.topAnchor.constraint(equalTo: view.topAnchor),
             renderer.bottomAnchor.constraint(equalTo: status.topAnchor),
 
-            // The editor starts below the toolbar rather than under it: prose
-            // sliding under a blur reads as more page above, but a line of source
-            // disappearing behind glass just looks like a clipped line.
-            editor.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            editor.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            editor.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            editor.bottomAnchor.constraint(equalTo: status.topAnchor),
-
             status.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             status.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             status.bottomAnchor.constraint(equalTo: view.bottomAnchor),
@@ -99,14 +84,6 @@ final class ContentViewController: NSViewController {
             }
             self?.onMessage?(message)
         }
-    }
-
-    /// Which of the two is on screen. Both are always built; only one is shown,
-    /// so neither has to be rebuilt to come back.
-    func showEditor(_ on: Bool) {
-        editor.isHidden = !on
-        renderer.isHidden = on
-        if on { editor.focus() } else { renderer.focus() }
     }
 
     // MARK: - Find
@@ -220,19 +197,7 @@ final class ContentViewController: NSViewController {
         }
         statusRight.alignment = .right
 
-        // A button rather than part of the label: the count is the way into the
-        // list, and something you can click has to look like it.
-        commentsButton.isBordered = false
-        commentsButton.target = self
-        commentsButton.action = #selector(showComments)
-        commentsButton.setContentHuggingPriority(.required, for: .horizontal)
-        commentsButton.isHidden = true
-
-        let left = NSStackView(views: [statusLeft, commentsButton])
-        left.orientation = .horizontal
-        left.spacing = 10
-        left.translatesAutoresizingMaskIntoConstraints = false
-        bar.addSubview(left)
+        bar.addSubview(statusLeft)
         bar.addSubview(statusRight)
         bar.addSubview(separator)
 
@@ -241,58 +206,22 @@ final class ContentViewController: NSViewController {
             separator.trailingAnchor.constraint(equalTo: bar.trailingAnchor),
             separator.topAnchor.constraint(equalTo: bar.topAnchor),
 
-            left.leadingAnchor.constraint(equalTo: bar.leadingAnchor, constant: 14),
-            left.centerYAnchor.constraint(equalTo: bar.centerYAnchor),
+            statusLeft.leadingAnchor.constraint(equalTo: bar.leadingAnchor, constant: 14),
+            statusLeft.centerYAnchor.constraint(equalTo: bar.centerYAnchor),
 
             statusRight.trailingAnchor.constraint(equalTo: bar.trailingAnchor, constant: -14),
             statusRight.centerYAnchor.constraint(equalTo: bar.centerYAnchor),
             statusRight.leadingAnchor.constraint(
-                greaterThanOrEqualTo: left.trailingAnchor, constant: 16
+                greaterThanOrEqualTo: statusLeft.trailingAnchor, constant: 16
             ),
         ])
         return bar
     }
 
-    private var words = 0
-    private var minutes = 0
-    private var comments = 0
-
     func setStatus(words: Int, minutes: Int) {
-        self.words = words
-        self.minutes = minutes
-        refreshStatus()
-    }
-
-    func setStatus(comments: Int) {
-        self.comments = comments
-        refreshStatus()
-    }
-
-    /// The comment count carries the accent the notes are marked with, so the
-    /// status bar says *there is something to read here* at a glance instead of
-    /// hiding it in the same grey as the word count.
-    private func refreshStatus() {
         let formatted = words.formatted(.number.grouping(.automatic))
         statusLeft.stringValue = "\(formatted) words · \(minutes) min read"
-
-        commentsButton.isHidden = comments == 0
-        guard comments > 0 else { return }
-        commentsButton.attributedTitle = NSAttributedString(
-            string: comments == 1 ? "1 comment" : "\(comments) comments",
-            attributes: [
-                .font: NSFont.systemFont(ofSize: 11, weight: .medium),
-                .foregroundColor: NSColor.imarkAccent,
-                .underlineStyle: NSUnderlineStyle.single.rawValue,
-                .underlineColor: NSColor.imarkAccent.withAlphaComponent(0.4),
-            ]
-        )
-        commentsButton.toolTip = "Show every comment"
     }
-
-    @objc private func showComments() {
-        onShowComments?(commentsButton)
-    }
-
 
     func setStatus(path: URL) {
         folder = path.deletingLastPathComponent()
@@ -305,13 +234,6 @@ final class ContentViewController: NSViewController {
     /// silent re-render is indistinguishable from nothing happening.
     func flashReloaded() {
         flash("Updated just now")
-    }
-
-    /// The file moved under an editor with unsaved text in it. Nothing was
-    /// reloaded — that would have taken the text with it — so this is the only
-    /// warning there is until the save refuses.
-    func flashChangedOnDisk() {
-        flash("Changed on disk · your text is still here")
     }
 
     private func flash(_ message: String) {
@@ -344,12 +266,4 @@ extension ContentViewController: NSSearchFieldDelegate {
             return false
         }
     }
-}
-
-
-/// Underlined and in the accent colour, so it reads as a link — and so it has
-/// to behave like one under the pointer too. Used by the status bar's comment
-/// count and by the Copy under an answer in the Ask panel.
-class LinkButton: NSButton {
-    override func resetCursorRects() { addCursorRect(bounds, cursor: .pointingHand) }
 }

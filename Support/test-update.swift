@@ -1,7 +1,7 @@
 // The version comparison behind "Imark X is available".
 //
 //   swiftc -parse-as-library Sources/Imark/Updates.swift \
-//          Sources/Imark/Settings.swift Sources/Imark/NoteColour.swift \
+//          Sources/Imark/Settings.swift \
 //          Support/test-update.swift -o /tmp/imark-test-update && /tmp/imark-test-update
 //
 // Small on purpose: the network side is a GET and a JSON field, but a string

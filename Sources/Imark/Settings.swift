@@ -77,32 +77,6 @@ enum Settings {
         func face(dark: Bool) -> String { "\(rawValue)-\(dark ? "dark" : "light")" }
     }
 
-    /// Where "Search the web" goes. It is a URL with the phrase in it, so the
-    /// list costs nothing and the app stops having an opinion about somebody
-    /// else's searching.
-    enum SearchEngine: String, CaseIterable {
-        case google, duckduckgo, bing, kagi
-
-        var label: String {
-            switch self {
-            case .google: return "Google"
-            case .duckduckgo: return "DuckDuckGo"
-            case .bing: return "Bing"
-            case .kagi: return "Kagi"
-            }
-        }
-
-        func url(searching phrase: String) -> URL? {
-            let query = phrase.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-            switch self {
-            case .google: return URL(string: "https://www.google.com/search?q=\(query)")
-            case .duckduckgo: return URL(string: "https://duckduckgo.com/?q=\(query)")
-            case .bing: return URL(string: "https://www.bing.com/search?q=\(query)")
-            case .kagi: return URL(string: "https://kagi.com/search?q=\(query)")
-            }
-        }
-    }
-
     enum Width: String, CaseIterable {
         case narrow, normal, wide, full
 
@@ -157,44 +131,11 @@ enum Settings {
         set { store.set(newValue.rawValue, forKey: "palette"); announce() }
     }
 
-    /// The name that signs your notes. It used to be `NSFullUserName()` with no
-    /// way round it — the one value this app writes into somebody else's file,
-    /// and the one thing there was no way to correct.
-    static var authorName: String {
-        get {
-            let stored = store.string(forKey: "authorName") ?? ""
-            return stored.isEmpty ? NSFullUserName() : stored
-        }
-        set {
-            let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
-            // Emptied on purpose means "use the account name again", not "sign
-            // nothing" — a note with no author reads as anonymous rather than
-            // as yours.
-            store.set(trimmed, forKey: "authorName")
-            announce()
-        }
-    }
-
-    static var noteColour: NoteColour {
-        get { NoteColour(attribute: store.string(forKey: "noteColour")) }
-        set { store.set(newValue.attribute, forKey: "noteColour"); announce() }
-    }
-
     /// Off by default. The menu bar is the most contested strip of space on the
     /// machine, and a document reader has no standing claim to it.
     static var showInMenuBar: Bool {
         get { store.bool(forKey: "showInMenuBar") }
         set { store.set(newValue, forKey: "showInMenuBar"); announce() }
-    }
-
-    static var searchEngine: SearchEngine {
-        get { SearchEngine(rawValue: store.string(forKey: "searchEngine") ?? "") ?? .google }
-        set { store.set(newValue.rawValue, forKey: "searchEngine"); announce() }
-    }
-
-    static var preferredEditor: URL? {
-        get { store.string(forKey: "preferredEditor").map(URL.init(fileURLWithPath:)) }
-        set { store.set(newValue?.path, forKey: "preferredEditor"); announce() }
     }
 
     static var sidebarCollapsed: Bool {
@@ -221,14 +162,6 @@ enum Settings {
     static var offeredUpdate: String {
         get { store.string(forKey: "offeredUpdate") ?? "" }
         set { store.set(newValue, forKey: "offeredUpdate") }
-    }
-
-    /// The version of Imark whose copies of the agent files are on disk. It is
-    /// what tells the first launch after an update from every launch after that,
-    /// which is when those copies get brought forward. See AgentSetup.refresh.
-    static var agentFilesVersion: String {
-        get { store.string(forKey: "agentFilesVersion") ?? "" }
-        set { store.set(newValue, forKey: "agentFilesVersion") }
     }
 
     static func applyThemeToApp() {
