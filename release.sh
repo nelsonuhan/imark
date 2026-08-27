@@ -24,9 +24,9 @@ SIGN_IDENTITY="${IMARK_SIGN_IDENTITY:-}"
 NOTARY_PROFILE="${IMARK_NOTARY_PROFILE:-}"
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Support/Imark-Info.plist)"
 
-APP="$ROOT/dist/Imark.app"
+APP="$ROOT/dist/imark.app"
 STAGE="$ROOT/dist/dmg"
-DMG="$ROOT/dist/Imark-$VERSION.dmg"
+DMG="$ROOT/dist/imark-$VERSION.dmg"
 
 step() { printf '\n\033[1;35m▸ %s\033[0m\n' "$1"; }
 die() { printf '\n\033[1;31m✗ %s\033[0m\n' "$1" >&2; exit 1; }
@@ -87,7 +87,7 @@ cp -R "$APP" "$STAGE/"
 ln -s /Applications "$STAGE/Applications"
 
 hdiutil create \
-	-volname "Imark $VERSION" \
+	-volname "imark $VERSION" \
 	-srcfolder "$STAGE" \
 	-ov -format UDZO \
 	"$DMG" >/dev/null
@@ -124,12 +124,11 @@ printf '\033[1;32m✓ %s (%s)\033[0m\n' "$DMG" "$(du -h "$DMG" | cut -f1)"
 
 # The one thing a built image does not do by itself. Homebrew reads a cask in
 # another repository, and it goes on installing the previous version until that
-# file is written — which is the one way somebody downloads an old Imark while
-# being told it is the new one. The site is not on this list: imark-site reads
-# the releases here twice an hour and rebuilds itself when the number moves.
+# file is written — which is the one way somebody downloads an old imark while
+# being told it is the new one.
 cat <<-EOF
 
 	then, to publish:
-	  gh release create v$VERSION "$DMG" --title "Imark $VERSION" --notes "…"
+	  gh release create v$VERSION "$DMG" --title "imark $VERSION" --notes "…"
 	  Support/tap.sh          point Homebrew at it
 EOF

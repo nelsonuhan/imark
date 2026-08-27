@@ -6,7 +6,7 @@ there is no CI, and signing keys never enter this repository.
 ## Once, on the machine that will build
 
 ```bash
-git clone https://github.com/migsilva89/imark.git
+git clone <your fork's URL>
 cd imark/renderer && npm ci && cd ..
 ```
 
@@ -48,8 +48,7 @@ Support/bump.sh 0.2.4
 
 The version is written in two files — the app and the Quick Look extension —
 and one command writes both. `Support/bump.sh --check` says whether they agree;
-the release refuses to build when they do not. Nothing else needs editing: the
-site reads the version, the notes and the `.dmg` size off the GitHub release.
+the release refuses to build when they do not.
 
 Then:
 
@@ -65,7 +64,7 @@ signed, notarised, broken build is worse than an unsigned one: it carries
 somebody's name and opens without a warning. `--force` skips the gate and is for
 when you know exactly why.
 
-It leaves `dist/Imark-<version>.dmg`, signed, notarised and stapled. Notarisation
+It leaves `dist/imark-<version>.dmg`, signed, notarised and stapled. Notarisation
 is Apple looking at the binary and takes a few minutes.
 
 Either variable can be left out. Without `IMARK_NOTARY_PROFILE` you get a signed
@@ -76,8 +75,8 @@ are fine for handing to a friend, neither is fine for a public release.
 ## Check it before it goes anywhere
 
 ```bash
-spctl -a -vvv -t install dist/Imark-<version>.dmg
-xcrun stapler validate dist/Imark-<version>.dmg
+spctl -a -vvv -t install dist/imark-<version>.dmg
+xcrun stapler validate dist/imark-<version>.dmg
 ```
 
 `spctl` should say `accepted` and `source=Notarized Developer ID`. Anything else
@@ -93,56 +92,33 @@ Tag the commit and attach the `.dmg` to a GitHub release:
 
 ```bash
 git tag v0.1.0 && git push origin v0.1.0
-gh release create v0.1.0 dist/Imark-0.1.0.dmg --title "Imark 0.1.0" --notes "…"
+gh release create v0.1.0 dist/imark-0.1.0.dmg --title "imark 0.1.0" --notes "…"
 ```
 
 GitHub does not serve release assets from a private repository, so the repo has
-to be public before the download link works for anyone else.
+to be public before the download link works for anyone else — including
+`brew`, below.
 
 ## Homebrew
 
-`brew install --cask migsilva89/imark/imark` reads a single file in a second
-repository — `Casks/imark.rb` in `migsilva89/homebrew-imark` — which names a
-version and the checksum of its `.dmg`. Publishing the release does not touch
-it. One command does, once the release is up:
+`brew install --cask nelsonuhan/tap/imark` reads a single file in a second
+repository — `Casks/imark.rb` in `nelsonuhan/homebrew-tap` — which names a
+version and the checksum of its `.dmg`. That repository does not exist yet;
+create it once, public, with a `Casks/imark.rb` in it (`brew tap-new` scaffolds
+one, or copy the shape of the cask from
+[migsilva89/homebrew-imark](https://github.com/migsilva89/homebrew-imark) and
+point it at your own releases). After that, publishing a release does not touch
+the cask — one command does:
 
 ```bash
 Support/tap.sh
 ```
 
 It takes the checksum from the asset as GitHub serves it — the bytes `brew`
-downloads — writes the two lines, pushes, and reads the file back to confirm.
-`Support/tap.sh --check` says which version Homebrew is handing out right now.
+downloads — writes the version and checksum into the cask, pushes, and reads
+the file back to confirm. `Support/tap.sh --check` says which version Homebrew
+is handing out right now. It resolves the release source from `origin`, so it
+keeps working once that points at your own fork.
 
-Skipping it is the worst of the three misses: the website and the in-app update
-offer the new version while `brew upgrade` quietly installs the old one and
-reports success.
-
-## The notes are the changelog
-
-Whatever goes in `--notes` is published, as written, at
-[imarkmd.com/changelog](https://imarkmd.com/changelog). The site reads the
-releases from this repository once a day and renders the Markdown; there is no
-second copy to keep in step, and no separate changelog to remember.
-
-So write them for the person updating, not for the commit log. Markdown
-headings, prose, `code` and links all render. A release published with `--notes
-"fixes"` says "fixes" on the website until the next one.
-
-The site also reads the version and the `.dmg` size from the same release, so
-there is nothing to edit there by hand.
-
-## The site catches up on its own
-
-Nothing to do here. `imark-site` runs a workflow every half hour that reads the
-latest release, writes the version and the `.dmg` size into `lib/release.json`
-when the number has moved, and that commit is what makes Vercel rebuild
-imarkmd.com. Redeploying by hand used to be the last step of a release; it is
-not one any more.
-
-To watch it, or to stop waiting for the half hour:
-
-```bash
-gh run list --repo migsilva89/imark-site --limit 3
-gh workflow run check-release.yml --repo migsilva89/imark-site
-```
+Skipping it is the whole miss here: `brew upgrade` quietly keeps installing the
+old version and reports success.

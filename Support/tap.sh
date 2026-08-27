@@ -5,11 +5,11 @@
 #   Support/tap.sh 0.2.4      that one
 #   Support/tap.sh --check    say what Homebrew is handing out, change nothing
 #
-# `brew install --cask migsilva89/imark/imark` reads one file in another
-# repository — Casks/imark.rb in migsilva89/homebrew-imark — and that file names
+# `brew install --cask nelsonuhan/tap/imark` reads one file in another
+# repository — Casks/imark.rb in nelsonuhan/homebrew-tap — and that file names
 # a version and the checksum of its .dmg. Publishing a release on GitHub does
 # not touch it, so until this runs Homebrew keeps installing the previous
-# version while the website and the in-app update offer the new one.
+# version.
 #
 # The checksum is taken from the asset as GitHub serves it, not from the local
 # dist/ copy, because those are the bytes somebody's brew will actually download
@@ -18,13 +18,18 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-TAP="migsilva89/homebrew-imark"
+TAP="nelsonuhan/homebrew-tap"
 CASK="Casks/imark.rb"
 
 step() { printf '\n\033[1;35m▸ %s\033[0m\n' "$1"; }
 die() { printf '\n\033[1;31m✗ %s\033[0m\n' "$1" >&2; exit 1; }
 
 command -v gh >/dev/null || die "gh is not installed — brew install gh"
+
+# Wherever `origin` points, so this keeps working once it points at your own
+# fork instead of upstream. https:// and git@ remotes both parse.
+SOURCE_REPO="$(git remote get-url origin \
+	| sed -E 's#^(git@github\.com:|https://github\.com/)##; s#\.git$##')"
 
 # Through the API rather than raw.githubusercontent, which serves a cached copy
 # for a few minutes and would report the old version right after a push.
@@ -49,20 +54,20 @@ if [ "${1:-}" = "--check" ]; then
 fi
 
 VERSION="${1:-$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Support/Imark-Info.plist)}"
-DMG="Imark-$VERSION.dmg"
+DMG="imark-$VERSION.dmg"
 
 # --------------------------------------------------------------- the release
 
 step "the release"
-gh release view "v$VERSION" --json assets --jq '.assets[].name' 2>/dev/null \
+gh api "repos/$SOURCE_REPO/releases/tags/v$VERSION" --jq '.assets[].name' 2>/dev/null \
 	| grep -qx "$DMG" \
-	|| die "v$VERSION has no $DMG attached — publish the release first, see RELEASING.md"
+	|| die "v$VERSION has no $DMG attached on $SOURCE_REPO — publish the release first, see RELEASING.md"
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
 curl -fsSL -o "$TMP/$DMG" \
-	"https://github.com/migsilva89/imark/releases/download/v$VERSION/$DMG"
+	"https://github.com/$SOURCE_REPO/releases/download/v$VERSION/$DMG"
 SHA="$(shasum -a 256 "$TMP/$DMG" | cut -d' ' -f1)"
 echo "$DMG · $(du -h "$TMP/$DMG" | cut -f1) · $SHA"
 
@@ -100,5 +105,5 @@ step "confirm"
 [ "$(cask_version)" = "$VERSION" ] \
 	|| die "pushed, but the tap still serves $(cask_version) — check $TAP by hand"
 
-printf '\033[1;32m✓ brew install --cask migsilva89/imark/imark now gives %s\033[0m\n' "$VERSION"
+printf '\033[1;32m✓ brew install --cask nelsonuhan/tap/imark now gives %s\033[0m\n' "$VERSION"
 echo "  try it: brew update && brew upgrade --cask imark"
