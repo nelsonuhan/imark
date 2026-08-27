@@ -1,7 +1,7 @@
 import AppKit
 import ImarkRender
 
-/// Table of contents plus the sibling `.md` files, in one column.
+/// Table of contents, in one column.
 ///
 /// A flat table with section-header rows rather than an outline view: the
 /// headings already carry their depth as indentation, and the collapsing is
@@ -10,24 +10,15 @@ final class SidebarViewController: NSViewController {
     enum Row {
         case header(String)
         case heading(TocEntry, hasChildren: Bool, isCollapsed: Bool)
-        case file(URL)
     }
 
     var onSelectHeading: ((String) -> Void)?
-    var onSelectFile: ((URL) -> Void)?
-    /// ⌘-click, the way the Finder and Safari open a thing beside the thing you
-    /// already have. Without it the only way to get a second tab is to leave the
-    /// app entirely, which is why nobody noticed tabs existed.
-    var onOpenFileInTab: ((URL) -> Void)?
 
     private let scroll = NSScrollView()
     private let table = OutlineTable()
 
     private var rows: [Row] = []
     private var toc: [TocEntry] = []
-    private var files: [URL] = []
-    private var recents: [URL] = []
-    private var currentFile: URL?
     private var activeID: String?
 
     /// Headings whose descendants are hidden.
@@ -53,7 +44,6 @@ final class SidebarViewController: NSViewController {
         table.action = #selector(rowClicked)
         table.addTableColumn(NSTableColumn(identifier: .init("main")))
         table.onArrow = { [weak self] expand in self?.arrowPressed(expand: expand) }
-        table.onCommandClick = { [weak self] row in self?.openInTab(row) ?? false }
 
         scroll.documentView = table
         scroll.drawsBackground = false
@@ -85,13 +75,6 @@ final class SidebarViewController: NSViewController {
         // A live reload rebuilds the outline; keep whatever is still folded.
         collapsed.formIntersection(Set(toc.map(\.id)))
         chooseDefaultStateIfNeeded()
-        rebuild()
-    }
-
-    func update(files: [URL], current: URL, recents: [URL] = []) {
-        self.files = files
-        self.currentFile = current
-        self.recents = recents
         rebuild()
     }
 
@@ -167,15 +150,6 @@ final class SidebarViewController: NSViewController {
                 ))
             }
         }
-        // A lone file is just the document you already have open.
-        if files.count > 1 {
-            built.append(.header("In this folder"))
-            built.append(contentsOf: files.map(Row.file))
-        }
-        if !recents.isEmpty {
-            built.append(.header("Recent"))
-            built.append(contentsOf: recents.map(Row.file))
-        }
         rows = built
         table.reloadData()
     }
@@ -201,22 +175,11 @@ final class SidebarViewController: NSViewController {
         activate(row: table.clickedRow)
     }
 
-    /// Whether the click was consumed. Headings and section titles have no
-    /// second place to go, so they fall through to an ordinary click.
-    private func openInTab(_ row: Int) -> Bool {
-        guard rows.indices.contains(row), case .file(let url) = rows[row],
-              let open = onOpenFileInTab
-        else { return false }
-        open(url)
-        return true
-    }
-
     private func activate(row: Int) {
         guard rows.indices.contains(row) else { return }
         switch rows[row] {
         case .header: break
         case .heading(let entry, _, _): onSelectHeading?(entry.id)
-        case .file(let url): onSelectFile?(url)
         }
     }
 }
@@ -258,18 +221,6 @@ extension SidebarViewController: NSTableViewDataSource, NSTableViewDelegate {
                 disclosure: hasChildren ? isCollapsed : nil,
                 onToggle: { [weak self] in self?.toggle(entry.id) }
             )
-
-        case .file(let url):
-            let cell = ItemCell(
-                text: url.deletingPathExtension().lastPathComponent,
-                indent: 0,
-                isActive: url == currentFile,
-                symbol: "doc.text"
-            )
-            // A gesture with no menu item behind it has nowhere else to be
-            // discovered, and ⌘/ only lists what the menus already say.
-            cell.toolTip = "\(url.lastPathComponent)\n⌘-click to open in a new tab"
-            return cell
         }
     }
 }
@@ -280,19 +231,6 @@ extension SidebarViewController: NSTableViewDataSource, NSTableViewDelegate {
 /// behaves. NSTableView has no notion of it, so the keys are caught here.
 private final class OutlineTable: NSTableView {
     var onArrow: ((Bool) -> Void)?
-    /// Returns whether it took the click.
-    var onCommandClick: ((Int) -> Bool)?
-
-    /// Caught before NSTableView sees it, not in the action. A ⌘-click still
-    /// moves the selection, and moving the selection already opens the file in
-    /// this window — by the time an action fired, the tab would be a second
-    /// copy of a document we had just navigated to.
-    override func mouseDown(with event: NSEvent) {
-        let clicked = row(at: convert(event.locationInWindow, from: nil))
-        if event.modifierFlags.contains(.command), clicked >= 0,
-           onCommandClick?(clicked) == true { return }
-        super.mouseDown(with: event)
-    }
 
     override func keyDown(with event: NSEvent) {
         switch event.keyCode {
@@ -334,7 +272,6 @@ private final class ItemCell: NSTableCellView {
         text: String,
         indent: CGFloat,
         isActive: Bool,
-        symbol: String? = nil,
         disclosure: Bool? = nil,
         onToggle: (() -> Void)? = nil
     ) {
@@ -362,12 +299,6 @@ private final class ItemCell: NSTableCellView {
         stack.spacing = 5
         stack.translatesAutoresizingMaskIntoConstraints = false
 
-        if let symbol, let image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil) {
-            let icon = NSImageView(image: image)
-            icon.contentTintColor = .tertiaryLabelColor
-            icon.symbolConfiguration = .init(pointSize: 11, weight: .regular)
-            stack.addArrangedSubview(icon)
-        }
         stack.addArrangedSubview(label)
         addSubview(stack)
 
