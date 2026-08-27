@@ -54,10 +54,6 @@ swift Support/make-icon.swift
 
 ## Diagrams
 
-<!-- imark quote="Diagrams" by="John Doe" at="2026-08-02T12:28:34Z"
-nbnbm
--->
-
 Mermaid is rendered locally and takes its colours from the document theme, so
 diagrams do not glow white in the middle of a dark page.
 
