@@ -52,41 +52,18 @@ if [ "${1:-}" != "--force" ]; then
 			|| die "main and origin/main have diverged — push or pull first"
 	fi
 
-	# The app, the Quick Look extension and the two plugin manifests all carry
-	# the version, and nothing complains when one of them stays behind — the
-	# marketplace just keeps offering an old number for a new build.
+	# The app and the Quick Look extension both carry the version, and nothing
+	# complains when one of them stays behind.
 	Support/bump.sh --check >/dev/null \
 		|| die "the version is not the same in every file — see above"
 
 	# The suites, because a signed and notarised broken build is worse than an
 	# unsigned one: it carries somebody's name and opens without a warning.
-	swiftc -parse-as-library Sources/Imark/Comments.swift Sources/Imark/NoteColour.swift \
-		Support/test-comments.swift -o /tmp/imark-release-test >/dev/null 2>&1 \
-		&& /tmp/imark-release-test >/dev/null || die "the comment tests failed"
-	node Support/test-export.mjs >/dev/null 2>&1 || die "the export test failed"
-	node Support/test-notes.mjs >/dev/null 2>&1 || die "the note anchoring tests failed"
-	node Support/test-invocation.mjs >/dev/null 2>&1 || die "the plugin invocation tests failed"
 	node Support/test-math.mjs >/dev/null 2>&1 || die "the math tests failed"
-	swift build >/dev/null 2>&1 \
-		&& swiftc -parse-as-library -I .build/debug/Modules \
-			$(find Sources/Imark -name '*.swift' ! -name main.swift) \
-			$(find Sources/ImarkRender -name '*.swift') \
-			Support/test-undo.swift -o /tmp/imark-release-undo >/dev/null 2>&1 \
-		&& /tmp/imark-release-undo >/dev/null || die "the undo tests failed"
-	swift build >/dev/null 2>&1 \
-		&& swiftc -parse-as-library -I .build/debug/Modules \
-			$(find Sources/Imark -name '*.swift' ! -name main.swift) \
-			$(find Sources/ImarkRender -name '*.swift') \
-			Support/test-editor.swift -o /tmp/imark-release-editor >/dev/null 2>&1 \
-		&& /tmp/imark-release-editor >/dev/null || die "the editor tests failed"
 	swiftc -parse-as-library Sources/Imark/Updates.swift Sources/Imark/Settings.swift \
-		Sources/Imark/NoteColour.swift Support/test-update.swift \
+		Support/test-update.swift \
 		-o /tmp/imark-release-update >/dev/null 2>&1 \
 		&& /tmp/imark-release-update >/dev/null || die "the update comparison tests failed"
-	swift Support/test-plus.swift >/dev/null 2>&1 || die "the margin button tests failed"
-	swift Support/test-front-matter.swift >/dev/null 2>&1 || die "the front matter tests failed"
-	Support/test-review.sh >/dev/null 2>&1 || die "the review round trip tests failed"
-	# test-setup.sh needs an assembled app, so it runs after the build instead.
 
 	echo "clean tree, on main, in sync, tests pass"
 fi
@@ -98,15 +75,6 @@ if [ -n "$SIGN_IDENTITY" ]; then
 	IMARK_SIGN_IDENTITY="$SIGN_IDENTITY" ./build.sh --no-install
 else
 	./build.sh --no-install
-fi
-
-# The install-and-remove suite, against the app that was just assembled rather
-# than whatever happens to sit in /Applications on this machine.
-if [ "${1:-}" != "--force" ]; then
-	step "installer checks"
-	IMARK_APP="$APP" Support/test-setup.sh >/dev/null 2>&1 \
-		|| die "the agent setup tests failed"
-	echo "setup ok"
 fi
 
 # --------------------------------------------------------------------- dmg

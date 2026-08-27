@@ -2,16 +2,15 @@
 # Sets the version everywhere it is written down.
 #
 #   Support/bump.sh 0.2.4     write it
-#   Support/bump.sh --check   say whether the four agree, change nothing
+#   Support/bump.sh --check   say whether the two agree, change nothing
 #
-# The version lives in four files: the app, the Quick Look extension, and the
-# two manifests Claude Code reads to install the plugin. They are read by
-# different things — Gatekeeper, Finder, the marketplace — and nothing notices
-# when one of them falls behind. So one command writes all four, and the
-# release gate refuses a build where they disagree.
+# The version lives in two files: the app and the Quick Look extension. They
+# are read by different things — Gatekeeper, Finder — and nothing notices when
+# one of them falls behind. So one command writes both, and the release gate
+# refuses a build where they disagree.
 #
 # The site needs nothing: it reads the version, the notes and the .dmg size off
-# the GitHub release. These four files are the part no server can work out.
+# the GitHub release. These two files are the part no server can work out.
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -23,8 +22,6 @@ cd "$(dirname "$0")/.."
 FILES=(
 	"Support/Imark-Info.plist"
 	"Support/QuickLook-Info.plist"
-	"plugin/.claude-plugin/plugin.json"
-	".claude-plugin/marketplace.json"
 )
 
 version_of() {
@@ -81,5 +78,5 @@ for f in "${FILES[@]}"; do
 	' "$f" "$VERSION"
 done
 
-printf '\033[1;32m✓ %s in the app, Quick Look, the plugin and the marketplace\033[0m\n' "$VERSION"
+printf '\033[1;32m✓ %s in the app and Quick Look\033[0m\n' "$VERSION"
 echo "  next: git commit -am \"$VERSION\" && git push, then ./release.sh"
