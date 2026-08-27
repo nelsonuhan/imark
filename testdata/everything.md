@@ -11,8 +11,8 @@ updated: 2026-08-02
 # Everything at once
 
 This file exists to be opened, not to be read. It carries every construction the
-renderer knows, and enough headings that the outline folds itself and the rail
-has something to say. If something breaks, it breaks here first.
+renderer knows, and enough headings that the outline folds itself. If something
+breaks, it breaks here first.
 
 ## Text
 
@@ -101,7 +101,6 @@ sequenceDiagram
 | Line map | `renderer/src/main.js` | `data-line` on every block |
 | Live reload | `Sources/Imark/FileWatcher.swift` | Survives an atomic save |
 | Outline | `Sources/Imark/SidebarViewController.swift` | Folds past twenty entries |
-| Rail | `renderer/src/main.js` | One tick per heading |
 
 A wider one, to check that it scrolls inside its own box rather than pushing the
 whole page sideways:
@@ -150,11 +149,11 @@ Inline maths like $e^{i\pi} + 1 = 0$ sits in the line without disturbing it.
 Display maths gets its own block:
 
 $$
-\text{falloff}(d) = \exp\left(-\frac{d^2}{2\sigma^2}\right)
+\text{minutes}(w) = \max\left(1, \text{round}\left(\frac{w}{220}\right)\right)
 $$
 
-That one is real: it is the curve the outline rail uses to taper around wherever
-you are pointing, with $\sigma = 1.15$.
+That one is real: it is the reading-time estimate in the status bar, at 220
+words a minute.
 
 An equation may also be broken over as many lines as it takes to stay readable,
 and the subscripts in it are subscripts rather than italics:
@@ -206,8 +205,7 @@ Three dashes make a rule, and it should be a hairline rather than a bar.
 
 ### One
 
-Enough sections follow that the outline in the sidebar opens folded, and the
-heading rail has more ticks than it can show at full pitch and starts sampling.
+Enough sections follow that the outline in the sidebar opens folded.
 
 ### Two
 
@@ -215,8 +213,8 @@ Each of these is deliberately short. What matters is how many there are.
 
 ### Three
 
-The rail samples evenly rather than truncating, or dragging along it would lie
-about where you are in the document.
+The active heading in the sidebar should still track the scroll position
+accurately even with this many short sections in a row.
 
 ### Four
 

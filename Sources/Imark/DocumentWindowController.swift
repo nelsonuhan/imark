@@ -85,10 +85,6 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate {
         sidebar.onSelectHeading = { [weak self] id in self?.content.renderer.scrollTo(anchor: id) }
 
         applySettings()
-        // Left, same as the preview panel: the rail lives inside the web view,
-        // which already starts to the right of the sidebar, so it never collides
-        // with it — and one consistent position beats one clever one.
-        content.renderer.setRail("left")
 
         show(url, pushingHistory: false)
 
@@ -139,7 +135,7 @@ final class DocumentWindowController: NSWindowController, NSWindowDelegate {
 
         if text.utf8.count > Self.sizeLimit {
             let prefix = String(decoding: Array(text.utf8.prefix(Self.sizeLimit)), as: UTF8.self)
-            text = prefix + "\n\n---\n\n> **Truncated.** Above 5 MB Imark shows only the beginning."
+            text = prefix + "\n\n---\n\n> **Truncated.** Above 5 MB imark shows only the beginning."
         }
 
         content.renderer.render(markdown: text, path: url.path)

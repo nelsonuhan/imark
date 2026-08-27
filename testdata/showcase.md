@@ -99,7 +99,6 @@ while [[a-note-that-does-not-exist]] stays red and inert rather than pretending.
 | Outline | `SidebarViewController.swift` | Folds past 20 entries |
 | Wiki-links | `LinkRouter.swift` | Exact neighbour beats a fuzzy match |
 | Quick Look | `ImarkQuickLook` | Shares the renderer with the app |
-| Rail | `renderer/src/main.js` | Gaussian taper, sigma 1.15 |
 
 ## Lists
 

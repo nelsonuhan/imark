@@ -255,14 +255,6 @@ function applyFrontMatter(shown) {
   document.documentElement.dataset.frontMatter = shown ? 'shown' : 'hidden'
 }
 
-function setFrontMatter(shown) {
-  applyFrontMatter(shown)
-  // The card's height comes out of the page with it, so everything below moves
-  // — and the rail is drawn from where things were. Without this the heading
-  // tick stays at the old height, pointing above its words. A render does this
-  // for itself, further down; a toggle has nothing else.
-  buildRail(content())
-}
 
 /* --------------------------------------------------------------- mermaid */
 
@@ -373,312 +365,6 @@ function glideTo(top) {
   scrollAnimation = requestAnimationFrame(step)
 }
 
-/* ------------------------------------------------------------------ rail */
-
-// The table of contents for Quick Look, where there is no room for a sidebar.
-// Only H1 to H3 get a tick: every mark has to be a place you can name, or the
-// rail is texture rather than navigation.
-
-const RAIL_SPAN = 0.72       // how much of the panel the rail should fill
-// Between two headings. Every row is half of this, because a minor gradation
-// sits in each gap.
-const RAIL_PITCH_RANGE = [11, 22]
-// A minor row is a gradation, not a place: thin, faint, and it grows far less
-// than a heading when the funnel passes over it.
-const RAIL_MINOR_WIDTH = 5
-const RAIL_MINOR_OPACITY = 0.15
-const RAIL_MINOR_AMPLITUDE = 10
-// Narrow on purpose. At 2.6 the third tick either side still grew by half and
-// the funnel read as a blunt bulge; at 1.15 only the immediate neighbours are
-// clearly bigger and everything past them settles back to rest.
-const RAIL_SIGMA = 1.15
-const RAIL_AMPLITUDE = 32    // how much longer the mark at the centre grows
-
-// Set per document: few headings spread out, many pack in, so the rail is
-// neither a stub nor an overflowing column.
-let railPitch = RAIL_PITCH_RANGE[0]
-
-// Every row in the rail, majors and minors alike. Indices everywhere below are
-// row indices; `railSection` maps one back to the heading it belongs to.
-let railTicks = []
-let railSection = []
-let railBlocks = []
-let railTip = null
-
-let railScrollIndex = 0
-// Where the funnel is centred. Normally that follows the scroll position, but
-// while the pointer is on the rail it follows the pointer instead — you get to
-// look around the document before deciding to go there.
-let railHoverIndex = null
-
-const paintRail = () => updateRail(railHoverIndex ?? railScrollIndex)
-
-const headingLevel = (el) => (/^H[1-6]$/.test(el.tagName) ? Number(el.tagName[1]) : 0)
-
-// Headings stand slightly proud of prose, but only slightly: if the resting
-// widths spread too far they compete with the funnel and the rail reads as
-// noise instead of as one moving shape.
-const restingWidth = (level) => 10 + Math.max(0, 3 - level) * 3
-
-const restingOpacity = (level) => 0.34 + Math.max(0, 3 - level) * 0.06
-
-// A bell instead of a linear ramp with a cutoff: the taper has no edge, so the
-// funnel reads as one soft shape however fast you move.
-const falloffAt = (distance) => Math.exp(-(distance * distance) / (2 * RAIL_SIGMA * RAIL_SIGMA))
-
-function collectBlocks(root) {
-  const all = [...root.querySelectorAll('h1, h2, h3')]
-  // As many headings as the panel can hold at the tightest pitch. Halved
-  // against the row count, since each heading now brings a gradation with it.
-  const capacity = Math.max(12, Math.floor((window.innerHeight * 0.94) / RAIL_PITCH_RANGE[0] / 2))
-  if (all.length <= capacity) return all
-  // Sample evenly instead of truncating: the rail has to stay proportional to
-  // the whole document, or scrubbing lies about where you are.
-  const step = all.length / capacity
-  return Array.from({ length: capacity }, (_, i) => all[Math.floor(i * step)])
-}
-
-function buildRail(root) {
-  document.querySelector('.rail')?.remove()
-  document.querySelector('.rail-tip')?.remove()
-
-  railTicks = []
-  railSection = []
-  railBlocks = collectBlocks(root)
-  railHoverIndex = null
-  if (railBlocks.length < 3) return
-
-  // A row is half the distance between two headings: one heading, one gradation
-  // between it and the next. The last heading has nothing after it to bridge to.
-  const rows = railBlocks.length * 2 - 1
-  // The range is written in headings, so it is halved before it meets a count
-  // of rows. Clamping a row pitch with heading bounds and halving afterwards
-  // gives a rail half the height it should be.
-  const [minPitch, maxPitch] = RAIL_PITCH_RANGE
-  railPitch = Math.min(maxPitch / 2, Math.max(minPitch / 2, (window.innerHeight * RAIL_SPAN) / rows))
-
-  const rail = document.createElement('nav')
-  rail.className = 'rail'
-  rail.setAttribute('aria-hidden', 'true')
-  rail.style.setProperty('--rail-row', `${railPitch}px`)
-
-  const add = (block, index, minor) => {
-    // The dash sits inside a taller transparent row, because a 2px mark is
-    // impossible to hit with a pointer.
-    const slot = document.createElement('span')
-    slot.className = minor ? 'rail-tick minor' : 'rail-tick'
-    slot.dataset.level = String(headingLevel(block))
-    // Which heading a row belongs to. A minor answers to the heading above it,
-    // so nothing on the rail is dead to the pointer — and the notes rail lines
-    // its marks up with the majors, which need to say where in the document
-    // they start. A tick's own position is a slot in a list, not a place.
-    if (block.id && !minor) slot.dataset.heading = block.id
-    slot.appendChild(document.createElement('i'))
-    rail.appendChild(slot)
-    railTicks.push(slot)
-    railSection.push(index)
-  }
-
-  railBlocks.forEach((block, index) => {
-    add(block, index, false)
-    if (index < railBlocks.length - 1) add(block, index, true)
-  })
-
-  railTip = document.createElement('aside')
-  railTip.className = 'rail-tip'
-  document.body.appendChild(railTip)
-
-  attachRail(rail)
-  document.body.appendChild(rail)
-}
-
-function updateRail(centre) {
-  railTicks.forEach((tick, index) => {
-    const dash = tick.firstElementChild
-    if (!dash) return
-
-    const minor = tick.classList.contains('minor')
-    const level = Number(tick.dataset.level || 0)
-    const base = minor ? RAIL_MINOR_WIDTH : restingWidth(level)
-    const rest = minor ? RAIL_MINOR_OPACITY : restingOpacity(level)
-    const amplitude = minor ? RAIL_MINOR_AMPLITUDE : RAIL_AMPLITUDE
-    // Measured in headings, not rows. The bell was tuned so that the tick
-    // either side grows and the third is back at rest; counting gradations
-    // would halve its reach and the funnel would crawl at half speed.
-    const weight = falloffAt((index - centre) / 2)
-
-    dash.style.width = `${base + weight * amplitude}px`
-    dash.style.opacity = `${rest + weight * (1 - rest)}`
-    tick.classList.toggle('is-active', index === centre && !minor)
-  })
-}
-
-/* ---------------------------------------------------------- rail tooltip */
-
-const flatten = (el) => el.textContent.replace(/\s+/g, ' ').trim()
-
-const headingIn = (el) =>
-  /^H[1-6]$/.test(el.tagName) ? el : el.querySelector('h1, h2, h3, h4, h5, h6')
-
-function tipContent(index) {
-  const heading = railBlocks[index]
-  if (!heading) return null
-
-  // Every tick is a heading now, so the title is the tick itself. The body has
-  // to come from the DOM rather than from railBlocks — the prose that follows
-  // is no longer in the list.
-  let body = ''
-  let sibling = heading.nextElementSibling
-  while (sibling && !headingIn(sibling)) {
-    body = flatten(sibling)
-    if (body) break
-    sibling = sibling.nextElementSibling
-  }
-
-  const position = railBlocks.length > 1 ? index / (railBlocks.length - 1) : 0
-
-  return {
-    label: `${Math.round(position * 100)}% in`,
-    title: flatten(heading),
-    body,
-  }
-}
-
-function showTip(index, tick) {
-  if (!railTip || !tick) return
-  const content = tipContent(railSection[index] ?? index)
-  if (!content) return
-
-  railTip.replaceChildren()
-
-  const label = document.createElement('em')
-  label.textContent = content.label
-  railTip.appendChild(label)
-
-  const heading = document.createElement('strong')
-  heading.textContent = content.title
-  railTip.appendChild(heading)
-
-  if (content.body) {
-    const body = document.createElement('span')
-    body.textContent = content.body
-    railTip.appendChild(body)
-  }
-
-  railTip.classList.add('is-visible')
-
-  // Anchor to the tick, then keep the whole card on screen. Height has to be
-  // read after the content lands or the first frame is positioned wrong.
-  const box = tick.getBoundingClientRect()
-  const height = railTip.offsetHeight
-  const top = Math.min(
-    Math.max(10, box.top + box.height / 2 - height / 2),
-    window.innerHeight - height - 10,
-  )
-  railTip.style.top = `${top}px`
-}
-
-function hideTip() {
-  railTip?.classList.remove('is-visible')
-}
-
-/* --------------------------------------------------------- rail scrubbing */
-
-function attachRail(rail) {
-  let scrubbing = false
-
-  const nearest = (clientY) => {
-    const first = railTicks[0].getBoundingClientRect()
-    // Ticks are evenly pitched, so arithmetic beats measuring all of them on
-    // every pointer move.
-    const index = Math.round((clientY - (first.top + first.height / 2)) / railPitch)
-    return Math.min(Math.max(index, 0), railTicks.length - 1)
-  }
-
-  /// Where the document should sit for a pointer anywhere along the rail —
-  /// between headings as well as on them.
-  ///
-  /// Snapping to the nearest heading is right for a click and wrong for a drag:
-  /// it made scrubbing jump from section to section, which reads as the rail
-  /// resisting rather than following. This interpolates between the heading
-  /// above and the one below, so the page moves with the hand the way a
-  /// scrollbar does, while the rail still means headings.
-  const scrollAt = (clientY) => {
-    const first = railTicks[0].getBoundingClientRect()
-    const row = (clientY - (first.top + first.height / 2)) / railPitch
-    // Rows are half-headings — one tick per heading, one gradation between.
-    const at = Math.min(Math.max(row / 2, 0), railBlocks.length - 1)
-    const lower = Math.floor(at)
-    const upper = Math.min(lower + 1, railBlocks.length - 1)
-    const topOf = (i) => railBlocks[i].getBoundingClientRect().top + window.scrollY - 24
-    const from = topOf(lower)
-    return from + (topOf(upper) - from) * (at - lower)
-  }
-
-  // A gradation takes you to the heading it sits under. It is not a place of
-  // its own, and a row that swallows a click is worse than one that is not
-  // there.
-  const goTo = (index, smooth) => {
-    const target = railBlocks[railSection[index]]
-    if (!target) return
-    const top = target.getBoundingClientRect().top + window.scrollY - 24
-    // Dragging tracks the pointer one to one; a click gets the glide.
-    if (smooth) glideTo(top)
-    else {
-      cancelAnimationFrame(scrollAnimation)
-      window.scrollTo(0, top)
-    }
-    railScrollIndex = index
-  }
-
-  // Deliberately not coalesced through requestAnimationFrame: WebKit stops
-  // firing it whenever it decides the view is not visible, and a rail that
-  // freezes is worse than one that does a little extra work. Instead the work
-  // is skipped outright while the pointer stays within the same tick, which is
-  // most pointer moves.
-  const track = (clientY) => {
-    // The page follows the pointer continuously, on every move — outside the
-    // tick check below, which exists to skip repainting the funnel and would
-    // otherwise make the scroll steppy again for a different reason.
-    if (scrubbing) {
-      cancelAnimationFrame(scrollAnimation)
-      window.scrollTo(0, scrollAt(clientY))
-    }
-    const index = nearest(clientY)
-    if (index === railHoverIndex) return
-    railHoverIndex = index
-    paintRail()
-    showTip(index, railTicks[index])
-    if (scrubbing) railScrollIndex = index
-  }
-
-  rail.addEventListener('pointermove', (event) => track(event.clientY))
-
-  rail.addEventListener('pointerdown', (event) => {
-    scrubbing = true
-    rail.classList.add('is-scrubbing')
-    rail.setPointerCapture(event.pointerId)
-    goTo(nearest(event.clientY), true)
-    event.preventDefault()
-  })
-
-  const release = (event) => {
-    if (!scrubbing) return
-    scrubbing = false
-    rail.classList.remove('is-scrubbing')
-    if (rail.hasPointerCapture?.(event.pointerId)) rail.releasePointerCapture(event.pointerId)
-  }
-  rail.addEventListener('pointerup', release)
-  rail.addEventListener('pointercancel', release)
-
-  rail.addEventListener('pointerleave', () => {
-    if (scrubbing) return
-    railHoverIndex = null
-    paintRail()
-    hideTip()
-  })
-}
-
 /* -------------------------------------------------------- code copy button */
 
 function addCopyButtons(root) {
@@ -714,7 +400,7 @@ const content = () => document.getElementById('content')
 let activeHeadings = []
 let renderToken = 0
 
-async function render({ markdown, path, theme, preview, rail, frontMatter }) {
+async function render({ markdown, path, theme, preview, frontMatter }) {
   const token = ++renderToken
   docDir = path ? path.slice(0, path.lastIndexOf('/')) || '/' : '/'
   slugCounts.clear()
@@ -724,10 +410,6 @@ async function render({ markdown, path, theme, preview, rail, frontMatter }) {
   // setters, and in Quick Look those calls arrive before the page exists.
   if (theme) document.documentElement.dataset.theme = theme
   if (preview) document.documentElement.dataset.preview = 'true'
-  // 'left' in the preview panel, 'right' in a window where the sidebar already
-  // owns the left edge. Absent means no rail at all.
-  if (rail) document.documentElement.dataset.rail = rail
-  else delete document.documentElement.dataset.rail
   // Carried too, so a document opened after the card was put away does not
   // flash it back for the length of one render.
   if (frontMatter !== undefined) applyFrontMatter(frontMatter)
@@ -748,7 +430,6 @@ async function render({ markdown, path, theme, preview, rail, frontMatter }) {
 
   addCopyButtons(root)
   activeHeadings = buildToc(root)
-  buildRail(root)
   await renderMermaid(root, theme)
   if (token !== renderToken) return
 
@@ -777,15 +458,6 @@ function updateActiveHeading() {
     else break
   }
   bridge({ type: 'active', id: activeHeadings[index].id })
-
-  let block = 0
-  for (let i = 0; i < railBlocks.length; i += 1) {
-    if (railBlocks[i].getBoundingClientRect().top <= 90) block = i
-    else break
-  }
-  // Headings sit on the even rows, gradations on the odd ones.
-  railScrollIndex = block * 2
-  paintRail()
 }
 
 window.addEventListener(
@@ -926,14 +598,9 @@ window.imark = {
   setWidth(width) {
     document.documentElement.dataset.width = width
   },
-  setFrontMatter,
+  setFrontMatter: applyFrontMatter,
   setPreview(on) {
     document.documentElement.dataset.preview = on ? 'true' : 'false'
-  },
-  setRail(side) {
-    if (side) document.documentElement.dataset.rail = side
-    else delete document.documentElement.dataset.rail
-    buildRail(content())
   },
   find: runFind,
   findStep: step,
@@ -942,8 +609,7 @@ window.imark = {
     document.documentElement.style.setProperty('--size-body', `${scale}px`)
   },
   /// How much of the top of the page the toolbar is standing on. Everything
-  /// pinned to the viewport has to start below it, not just the prose — a rail
-  /// that runs to the top edge runs under the toolbar.
+  /// pinned to the viewport has to start below it, not just the prose.
   setTopInset(points) {
     document.documentElement.style.setProperty('--top-inset', `${points}px`)
   },
