@@ -96,7 +96,7 @@ if git -C "$TMP/tap" diff --quiet; then
 fi
 
 git -C "$TMP/tap" commit --quiet -am "imark $VERSION"
-git -C "$TMP/tap" push --quiet origin main
+git -C "$TMP/tap" push --quiet origin HEAD
 echo "pushed"
 
 # ------------------------------------------------------------------- confirm
