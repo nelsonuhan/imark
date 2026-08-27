@@ -10,7 +10,6 @@ import katex from 'katex'
 import mermaid from 'mermaid'
 
 import math from './math.js'
-import wikilink from './wikilink.js'
 import './style.css'
 
 const bridge = (payload) => {
@@ -88,7 +87,6 @@ md.use(anchor, { slugify, permalink: false, tabIndex: false })
   .use(footnote)
   .use(deflist)
   .use(mark)
-  .use(wikilink)
 
 // Every block token knows which lines of the source produced it, stamped onto
 // the DOM as `data-line`.
@@ -414,16 +412,14 @@ const content = () => document.getElementById('content')
 let activeHeadings = []
 let renderToken = 0
 
-async function render({ markdown, path, theme, preview, frontMatter }) {
+async function render({ markdown, path, theme, frontMatter }) {
   const token = ++renderToken
   docDir = path ? path.slice(0, path.lastIndexOf('/')) || '/' : '/'
   slugCounts.clear()
 
-  // The very first render carries the theme and the preview flag — without this
-  // the page keeps the defaults from index.html until something calls the
-  // setters, and in Quick Look those calls arrive before the page exists.
+  // The very first render carries the theme — without this the page keeps
+  // the defaults from index.html until something calls the setters.
   if (theme) document.documentElement.dataset.theme = theme
-  if (preview) document.documentElement.dataset.preview = 'true'
   // Carried too, so a document opened after the card was put away does not
   // flash it back for the length of one render.
   if (frontMatter !== undefined) applyFrontMatter(frontMatter)
@@ -439,7 +435,7 @@ async function render({ markdown, path, theme, preview, frontMatter }) {
   if (token !== renderToken) return
 
   patchRawAttr(root, 'img', 'src')
-  patchRawAttr(root, 'a:not(.wikilink)', 'href')
+  patchRawAttr(root, 'a', 'href')
 
   // The highlight elements went out with the old DOM.
   matches = []
@@ -452,11 +448,6 @@ async function render({ markdown, path, theme, preview, frontMatter }) {
 
   const words = root.textContent.trim().split(/\s+/).filter(Boolean).length
   bridge({ type: 'meta', words, minutes: Math.max(1, Math.round(words / 220)) })
-
-  // Swift resolves these against the filesystem and tells us which ones are
-  // dead, so the renderer never has to know where notes live.
-  const targets = [...root.querySelectorAll('a.wikilink')].map((a) => a.dataset.wikilink)
-  if (targets.length) bridge({ type: 'wikilinks', targets: [...new Set(targets)] })
 
   window.scrollTo(0, Math.min(previousScroll, document.body.scrollHeight))
   updateActiveHeading()
@@ -495,13 +486,6 @@ window.addEventListener(
 document.addEventListener('click', (event) => {
   const anchorEl = event.target.closest('a')
   if (!anchorEl) return
-
-  const wiki = anchorEl.dataset.wikilink
-  if (wiki) {
-    event.preventDefault()
-    bridge({ type: 'openWiki', target: wiki })
-    return
-  }
 
   const href = anchorEl.getAttribute('href') ?? ''
   if (href.startsWith('#')) {
@@ -616,9 +600,6 @@ window.imark = {
     document.documentElement.dataset.width = width
   },
   setFrontMatter: applyFrontMatter,
-  setPreview(on) {
-    document.documentElement.dataset.preview = on ? 'true' : 'false'
-  },
   find: runFind,
   findStep: step,
   findClear: clearFind,
@@ -629,12 +610,6 @@ window.imark = {
   /// pinned to the viewport has to start below it, not just the prose.
   setTopInset(points) {
     document.documentElement.style.setProperty('--top-inset', `${points}px`)
-  },
-  markMissing(targets) {
-    const dead = new Set(targets)
-    for (const link of document.querySelectorAll('a.wikilink')) {
-      if (dead.has(link.dataset.wikilink)) link.dataset.missing = 'true'
-    }
   },
 }
 
