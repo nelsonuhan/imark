@@ -12,14 +12,11 @@ import AppKit
 /// gets out of the way — for an app this size, an update mechanism that could
 /// rewrite the binary would be a bigger risk than the staleness it prevents.
 enum Updates {
-    /// Where "Download" lands: the site, not the release page on GitHub. The
-    /// version numbers still come from GitHub, because that is where a release is
-    /// made, but somebody who pressed Download is being sent somewhere to read —
-    /// and a page of assets and checksums is not that.
-    static let page = URL(string: "https://imarkmd.com")!
+    /// Where "Download" lands: the GitHub releases page for this fork.
+    static let page = URL(string: "https://github.com/nelsonuhan/imark/releases/latest")!
 
     private static let api = URL(
-        string: "https://api.github.com/repos/migsilva89/imark/releases/latest"
+        string: "https://api.github.com/repos/nelsonuhan/imark/releases/latest"
     )!
 
     static var current: String {
@@ -95,7 +92,7 @@ enum Updates {
         let alert = NSAlert()
         alert.messageText = "imark \(version) is available"
         alert.informativeText =
-            "You have \(current). The download is a drag-and-drop over the old one."
+            "You have \(current). Run `brew upgrade --cask imark`, or download it from the release page."
         alert.addButton(withTitle: "View Download")
         alert.addButton(withTitle: "Later")
         if alert.runModal() == .alertFirstButtonReturn {
