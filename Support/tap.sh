@@ -74,7 +74,7 @@ echo "$DMG · $(du -h "$TMP/$DMG" | cut -f1) · $SHA"
 # ------------------------------------------------------------------ the cask
 
 step "the cask"
-git clone --quiet --depth 1 "https://github.com/$TAP.git" "$TMP/tap"
+gh repo clone "$TAP" "$TMP/tap" -- --quiet --depth 1
 
 # Only the two lines that change: a cask is Ruby, and everything else in it —
 # the zap list, the minimum macOS — is hand-written and stays as it was.
